@@ -48,6 +48,7 @@ ever silently destroys the other side's changes.
 | `dt diff [app]` | Live vs last snapshot. |
 | `dt edit <app>` | Snapshot, open `$EDITOR` on the live file, show diff, snapshot again. |
 | `dt undo <app>` | Restore the pre-edit snapshot. |
+| `dt open` | Open the `~/.dotfiles` store in Finder. |
 | `dt install-schedule` | Write a launchd agent that runs a silent daily `dt backup`. |
 
 ## What `dt backup` does, exactly

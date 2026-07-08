@@ -150,6 +150,7 @@ export function walkFiles(root: string): string[] {
   for (const entry of fs.readdirSync(root).sort()) {
     if (entry === ".git" || entry === "node_modules") continue; // never config
     if (entry === ".DS_Store") continue; // Finder noise
+    if (entry === ".zsh_sessions" || entry.startsWith(".zcompdump")) continue; // zsh state
     out.push(...walkFiles(path.join(root, entry)));
   }
   return out;

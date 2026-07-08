@@ -56,6 +56,8 @@ test("scan skips secrets, backup snapshots, hand-edit + apply updates live", () 
   fs.writeFileSync(path.join(home, ".config/foo/config.toml"), "color = true\n");
   fs.writeFileSync(path.join(home, ".zshrc"), "alias a=1\n");
   fs.writeFileSync(path.join(home, ".netrc"), "machine x login y password z\n");
+  fs.mkdirSync(path.join(home, ".config/foo/.zsh_sessions"));
+  fs.writeFileSync(path.join(home, ".config/foo/.zsh_sessions/x.session"), "state\n");
 
   let r = dt(env, "scan");
   expect(r.status).toBe(0);
@@ -64,6 +66,7 @@ test("scan skips secrets, backup snapshots, hand-edit + apply updates live", () 
   expect(fs.existsSync(path.join(storeHome, ".config/foo/config.toml"))).toBe(true);
   expect(fs.existsSync(path.join(storeHome, ".zshrc"))).toBe(true);
   expect(fs.existsSync(path.join(storeHome, ".netrc"))).toBe(false); // deny-listed
+  expect(fs.existsSync(path.join(storeHome, ".config/foo/.zsh_sessions"))).toBe(false); // state skipped
 
   // hand-edit the store copy, apply pushes it to the live location
   fs.writeFileSync(path.join(storeHome, ".zshrc"), "alias a=2\n");

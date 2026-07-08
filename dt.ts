@@ -18,6 +18,7 @@ const HELP = `dovetail (dt) — find, back up, and edit app configs safely
   dt diff [app]          live files vs last snapshot
   dt edit <app>          snapshot, open $EDITOR on the live files, snapshot again
   dt undo <app>          restore the previous snapshot (run again to redo)
+  dt open                open the ~/.dotfiles store in Finder
   dt install-schedule    silent daily backup via launchd
 
   --force                override a safety refusal (backup / apply / undo)`;
@@ -326,6 +327,7 @@ try {
     case "diff": cmdDiff(args[0]); break;
     case "edit": cmdEdit(args[0]); break;
     case "undo": cmdUndo(args[0], force); break;
+    case "open": store.ensureStore(); spawnSync("open", [store.STORE]); break;
     case "install-schedule": cmdInstallSchedule(); break;
     default: console.log(HELP);
   }
