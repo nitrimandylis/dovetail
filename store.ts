@@ -148,7 +148,8 @@ export function walkFiles(root: string): string[] {
   if (!st.isDirectory()) return []; // sockets, fifos
   const out: string[] = [];
   for (const entry of fs.readdirSync(root).sort()) {
-    if (entry === ".git") continue; // nested repos stay out of the store
+    if (entry === ".git" || entry === "node_modules") continue; // never config
+    if (entry === ".DS_Store") continue; // Finder noise
     out.push(...walkFiles(path.join(root, entry)));
   }
   return out;
