@@ -20,6 +20,14 @@ test("deny-list blocks secrets, allows configs", () => {
   expect(isDenied(path.join(HOME, ".config/gh/config.yml"))).toBe(false);
 });
 
+test("GUI editors get a wait flag, terminal editors don't", async () => {
+  const { editorCommand } = await import("./dt");
+  expect(editorCommand("code")).toEqual(["code", "--wait"]);
+  expect(editorCommand("code --wait")).toEqual(["code", "--wait"]); // no double flag
+  expect(editorCommand("zed")).toEqual(["zed", "--wait"]);
+  expect(editorCommand("vim")).toEqual(["vim"]);
+});
+
 test("dotfile names map to app names", () => {
   expect(appNameFromDotfile(".zshrc")).toBe("zsh");
   expect(appNameFromDotfile(".gitconfig")).toBe("git");

@@ -52,6 +52,24 @@ function changedSinceSnapshot(livePaths: string[]): string[] {
   return changed;
 }
 
+// dt edit needs the editor to block until the file is closed. GUI editors
+// (code, zed, ...) exit immediately unless given their wait flag — without it
+// the post-edit snapshot runs before the user has even seen the file.
+const WAIT_FLAGS: Record<string, string> = {
+  code: "--wait",
+  cursor: "--wait",
+  zed: "--wait",
+  subl: "--wait",
+  mate: "-w",
+};
+
+export function editorCommand(editorEnv: string): string[] {
+  const parts = editorEnv.split(" ").filter(Boolean);
+  const flag = WAIT_FLAGS[path.basename(parts[0])];
+  if (flag && !parts.includes("--wait") && !parts.includes("-w")) parts.push(flag);
+  return parts;
+}
+
 // ---------- commands ----------
 
 function cmdBackup(app: string | undefined, force: boolean, message?: string): void {
@@ -131,7 +149,7 @@ function cmdEdit(app: string | undefined): void {
 
   const files = m[app].map(store.untildeify).filter((p) => fs.existsSync(p));
   if (files.length === 0) fail(`none of ${app}'s tracked paths exist on disk`);
-  const editor = (process.env.EDITOR ?? "vim").split(" ");
+  const editor = editorCommand(process.env.EDITOR ?? "vim");
   spawnSync(editor[0], [...editor.slice(1), ...files], { stdio: "inherit" });
 
   cmdDiff(app); // store still holds the pre-edit copy, so this shows your edit
@@ -289,6 +307,9 @@ function cmdInstallSchedule(): void {
 
 // ---------- dispatch ----------
 
+if (import.meta.main) main();
+
+function main(): void {
 const argv = process.argv.slice(2);
 const force = argv.includes("--force");
 const [cmd, ...args] = argv.filter((a) => !a.startsWith("--"));
@@ -310,4 +331,5 @@ try {
   }
 } catch (e) {
   fail(e instanceof Error ? e.message : String(e));
+}
 }
