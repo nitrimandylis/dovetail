@@ -75,6 +75,25 @@ test("scan skips secrets, backup snapshots, hand-edit + apply updates live", () 
   expect(fs.readFileSync(path.join(home, ".zshrc"), "utf8")).toBe("alias a=2\n");
 });
 
+test("delete snapshots, refuses on unsnapshotted files, then removes from disk", () => {
+  const { home, env } = makeEnv();
+  const appDir = path.join(home, ".config/foo");
+  fs.mkdirSync(appDir, { recursive: true });
+  fs.writeFileSync(path.join(appDir, "config.toml"), "color = true\n");
+  fs.writeFileSync(path.join(appDir, "api-token.txt"), "hunter2\n"); // deny-listed, never snapshotted
+  expect(dt(env, "add", "foo", appDir).status).toBe(0);
+
+  expect(dt(env, "delete", "foo").status).not.toBe(0); // token file would be lost
+  expect(fs.existsSync(appDir)).toBe(true); // nothing deleted on refusal
+
+  expect(dt(env, "delete", "foo", "--force").status).toBe(0);
+  expect(fs.existsSync(appDir)).toBe(false); // live config gone
+  expect(dt(env, "list").stdout.includes("foo")).toBe(false); // untracked
+  // final snapshot survives in history
+  const log = spawnSync("git", ["-C", env.DT_STORE!, "log", "--format=%s"], { encoding: "utf8" });
+  expect(log.stdout).toContain("delete foo (final snapshot)");
+});
+
 test("apply refuses a conflict, obeys --force; backup refuses a dirty store", () => {
   const { home, env } = makeEnv();
   fs.writeFileSync(path.join(home, ".zshrc"), "v1\n");

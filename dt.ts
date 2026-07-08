@@ -12,6 +12,7 @@ const HELP = `dovetail (dt) — find, back up, and edit app configs safely
   dt scan                sweep ~/.config and ~/ dotfiles, track what passes the guards
   dt add <app> <path..>  track files/dirs manually (anything under ~)
   dt untrack <app>       stop tracking an app (its history stays in the store)
+  dt delete <app>        snapshot, then delete an orphaned config from disk
   dt list                tracked apps and their files
   dt backup [app]        snapshot live files into ~/.dotfiles (a git commit)
   dt apply [app]         push store copies out to the live locations
@@ -230,6 +231,32 @@ function cmdUntrack(app: string | undefined): void {
   console.log(`${app} untracked. its snapshots stay in the store's git history.`);
 }
 
+// For orphaned configs: final snapshot -> delete the live files -> untrack.
+// Everything stays recoverable from the store's git history.
+function cmdDelete(app: string | undefined, force: boolean): void {
+  if (app === undefined) fail("usage: dt delete <app>");
+  store.ensureStore();
+  const m = store.readManifest();
+  targetApps(m, app);
+  const livePaths = livePathsOf(m, [app]);
+
+  cmdBackup(app, force, `delete ${app} (final snapshot)`);
+
+  // guard: files the store never captured (deny-list, size, binary) would be lost forever
+  const unsnapshotted = livePaths
+    .flatMap((p) => store.walkFiles(p))
+    .filter((f) => !fs.existsSync(store.liveToStore(f)));
+  if (unsnapshotted.length > 0 && !force) {
+    console.error("refusing: these files were never snapshotted (deny-list/size/binary) and would be lost:");
+    for (const f of unsnapshotted) console.error("  " + store.tildeify(f));
+    fail("delete them anyway with `dt delete " + app + " --force`.");
+  }
+
+  for (const p of livePaths) fs.rmSync(p, { recursive: true, force: true });
+  cmdUntrack(app);
+  console.log(`deleted ${m[app].join(", ")} from disk.`);
+}
+
 function cmdList(): void {
   store.ensureStore();
   const m = store.readManifest();
@@ -321,6 +348,7 @@ try {
     case "scan": cmdScan(); break;
     case "add": cmdAdd(args[0], args.slice(1)); break;
     case "untrack": cmdUntrack(args[0]); break;
+    case "delete": cmdDelete(args[0], force); break;
     case "list": cmdList(); break;
     case "backup": cmdBackup(args[0], force); break;
     case "apply": cmdApply(args[0], force); break;

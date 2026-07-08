@@ -42,6 +42,7 @@ ever silently destroys the other side's changes.
 | `dt scan` | Sweep the dotfile zones (`~/.config/*`, `~/.*` rc-style files) and auto-track everything that passes the guards (see Safety). `~/Library` is find-only. |
 | `dt add <app> [paths…]` | Track an app manually — needed for anything outside the scan zones. |
 | `dt untrack <app>` | Stop tracking an app; its snapshots stay in git history. |
+| `dt delete <app>` | For orphaned configs: final snapshot, delete the live files from disk, untrack. Refuses (without `--force`) if any file was never snapshotted. |
 | `dt list` | Tracked apps and their files. |
 | `dt backup [app]` | Copy live → store, commit if anything changed. |
 | `dt apply [app]` | Copy store → live (commits store state first so the applied version is in history). |
