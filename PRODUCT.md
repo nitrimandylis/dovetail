@@ -1,4 +1,4 @@
-# dt
+# dovetail (`dt`)
 
 A personal CLI for finding, backing up, and safely editing the configs and
 dotfiles of apps and CLI tools. Single machine (this Mac), single user (Nick).

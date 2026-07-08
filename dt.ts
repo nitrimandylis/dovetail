@@ -6,7 +6,7 @@ import { spawnSync } from "node:child_process";
 import * as store from "./store";
 import * as discover from "./discover";
 
-const HELP = `dt — find, back up, and edit app configs safely
+const HELP = `dovetail (dt) — find, back up, and edit app configs safely
 
   dt find <app>          locate an app's config (conventional paths + man page)
   dt scan                sweep ~/.config and ~/ dotfiles, track what passes the guards

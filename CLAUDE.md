@@ -1,4 +1,4 @@
-# dt — project instructions
+# dovetail (`dt`) — project instructions
 
 Read PRODUCT.md first; it holds the settled design. Don't re-litigate decisions
 recorded there.
