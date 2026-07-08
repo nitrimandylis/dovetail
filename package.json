@@ -1,0 +1,14 @@
+{
+  "name": "dt",
+  "version": "1.0.0",
+  "type": "module",
+  "bin": {
+    "dt": "dt.ts"
+  },
+  "scripts": {
+    "typecheck": "bunx tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.14"
+  }
+}
