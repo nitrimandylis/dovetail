@@ -89,9 +89,13 @@ test("delete snapshots, refuses on unsnapshotted files, then removes from disk",
   expect(dt(env, "delete", "foo", "--force").status).toBe(0);
   expect(fs.existsSync(appDir)).toBe(false); // live config gone
   expect(dt(env, "list").stdout.includes("foo")).toBe(false); // untracked
-  // final snapshot survives in history
-  const log = spawnSync("git", ["-C", env.DT_STORE!, "log", "--format=%s"], { encoding: "utf8" });
-  expect(log.stdout).toContain("delete foo (final snapshot)");
+  // the deleted config is still recoverable from history (commit before the untrack)
+  const show = spawnSync(
+    "git",
+    ["-C", env.DT_STORE!, "show", "HEAD~1:home/.config/foo/config.toml"],
+    { encoding: "utf8" },
+  );
+  expect(show.stdout).toBe("color = true\n");
 });
 
 test("apply refuses a conflict, obeys --force; backup refuses a dirty store", () => {
