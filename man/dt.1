@@ -1,0 +1,75 @@
+.TH DT 1 "2026-07-12" "dovetail 1.0.0" "User Commands"
+.SH NAME
+dt \- find, back up, and edit app configs safely
+.SH SYNOPSIS
+.B dt
+<\fIcommand\fR> [\fIargs\fR] [\fB\-\-force\fR]
+.SH DESCRIPTION
+dovetail tracks application config files, snapshots them into a git-backed
+store at
+.IR ~/.dotfiles ,
+and pushes them back out to their live locations. Snapshots let you diff,
+edit, and undo config changes safely.
+.SH COMMANDS
+.TP
+.B find <\fIapp\fR>
+Locate an app's config (conventional paths + man page).
+.TP
+.B scan
+Sweep
+.I ~/.config
+and
+.I ~/
+dotfiles, track what passes the guards.
+.TP
+.B add <\fIapp\fR> <\fIpath\fR..>
+Track files/dirs manually (anything under ~).
+.TP
+.B untrack <\fIapp\fR>
+Stop tracking an app (its history stays in the store).
+.TP
+.B delete <\fIapp\fR>
+Snapshot, then delete an orphaned config from disk.
+.TP
+.B list
+List tracked apps and their files.
+.TP
+.B backup [\fIapp\fR]
+Snapshot live files into
+.I ~/.dotfiles
+(a git commit).
+.TP
+.B apply [\fIapp\fR]
+Push store copies out to the live locations.
+.TP
+.B diff [\fIapp\fR]
+Live files vs last snapshot.
+.TP
+.B edit <\fIapp\fR>
+Snapshot, open $EDITOR on the live files, snapshot again.
+.TP
+.B undo <\fIapp\fR>
+Restore the previous snapshot (run again to redo).
+.TP
+.B open
+Open the
+.I ~/.dotfiles
+store in Finder.
+.TP
+.B install\-schedule
+Silent daily backup via launchd.
+.SH OPTIONS
+.TP
+.B \-\-force
+Override a safety refusal (backup / apply / undo).
+.SH FILES
+.TP
+.I ~/.dotfiles
+The git-backed config store.
+.SH ENVIRONMENT
+.TP
+.B EDITOR
+Editor launched by
+.BR "dt edit" .
+.SH SEE ALSO
+.BR git (1)
