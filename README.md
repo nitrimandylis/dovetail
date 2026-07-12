@@ -61,9 +61,8 @@ You need [bun](https://bun.sh) and a Mac. That's the whole list.
 ```bash
 git clone https://github.com/nitrimandylis/dovetail.git
 cd dovetail
-bun install
-bun link
-cp man/dt.1 "$(brew --prefix)/share/man/man1/"   # so `man dt` works
+bun run compile   # → ~/.bun/bin/dt, and man dt into your manpath
+man dt            # the eleven commands + --force, offline
 ```
 
 Then `dt scan` to track everything, `dt install-schedule` for a silent daily backup at noon, and forget it exists until the day you break your zshrc — which is the day it earns its keep.
