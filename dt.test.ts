@@ -98,6 +98,29 @@ test("delete snapshots, refuses on unsnapshotted files, then removes from disk",
   expect(show.stdout).toBe("color = true\n");
 });
 
+test("push is a no-op without a remote, and backup pushes once there is one", () => {
+  const { home, env } = makeEnv();
+  fs.writeFileSync(path.join(home, ".zshrc"), "v1\n");
+  expect(dt(env, "add", "zsh", path.join(home, ".zshrc")).status).toBe(0);
+
+  // local-only store: push explains itself and succeeds without doing anything
+  let r = dt(env, "push");
+  expect(r.status).toBe(0);
+  expect(r.stdout).toContain("no remote configured");
+
+  const remote = path.join(env.DT_STORE!, "..", "remote.git");
+  spawnSync("git", ["init", "-q", "--bare", remote]);
+  spawnSync("git", ["-C", env.DT_STORE!, "remote", "add", "origin", remote]);
+
+  fs.writeFileSync(path.join(home, ".zshrc"), "v2\n");
+  r = dt(env, "backup");
+  expect(r.status).toBe(0);
+  expect(r.stdout).toContain("pushed to origin");
+
+  const show = spawnSync("git", ["-C", remote, "show", "HEAD:home/.zshrc"], { encoding: "utf8" });
+  expect(show.stdout).toBe("v2\n");
+});
+
 test("apply refuses a conflict, obeys --force; backup refuses a dirty store", () => {
   const { home, env } = makeEnv();
   fs.writeFileSync(path.join(home, ".zshrc"), "v1\n");

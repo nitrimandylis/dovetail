@@ -27,7 +27,7 @@
 
 Every app on your machine keeps a config file somewhere — `~/.config`, a hidden rc file, a folder buried in `~/Library/Application Support` — and some keep none at all. dovetail (`dt`) answers the question first: `dt find <app>` probes the conventional locations and greps the app's man page for a FILES section. Once found, configs get mirrored into `~/.dotfiles`, a local git repository where every backup is a commit and every mistake is an undo.
 
-The core model is deliberately boring: no symlink farms, no templates, no daemon. Your live files stay exactly where they are, and `dt` copies them in (`dt backup`) or out (`dt apply`) — which means hand-editing the store and pushing it live is the same operation as restoring a backup. A hardcoded secrets deny-list keeps your ssh keys, tokens, and shell history out of the repo, and the repo never leaves your machine, so anything the deny-list misses stays exactly where it already was.
+The core model is deliberately boring: no symlink farms, no templates, no daemon. Your live files stay exactly where they are, and `dt` copies them in (`dt backup`) or out (`dt apply`) — which means hand-editing the store and pushing it live is the same operation as restoring a backup. A hardcoded secrets deny-list keeps your ssh keys, tokens, and shell history out of the repo. The store has no remote unless you add one yourself, and `dt push` only ever pushes to a remote that already exists — make it a private repository, because once the store leaves the machine the deny-list is the only thing protecting anything it missed.
 
 It was designed for one user, one Mac, and zero patience for chezmoi's learning curve. It knows this about itself.
 
@@ -45,7 +45,7 @@ conventional paths:
 |---|---|---|
 | 01 | **`dt find <app>`** | what it actually finds — probes `~/.config`, `~/.<app>rc`, `~/Library`, then greps the man page and `--help` for path mentions |
 | 02 | **`dt scan`** | sweeps `~/.config/*` and home dotfiles, auto-tracks everything that passes the guards — secrets, binaries, and >1MB junk stay out |
-| 03 | **`dt backup [app]`** | mirrors live files into the store and commits — a no-op commit costs nothing, so the daily launchd job is free |
+| 03 | **`dt backup [app]`** | mirrors live files into the store and commits — a no-op commit costs nothing, so the daily launchd job is free. pushes too, if you've given the store a remote |
 | 04 | **`dt apply [app]`** | pushes store copies out to the live locations — hand-edit `~/.dotfiles`, run this, done |
 | 05 | **`dt edit <app>`** | snapshot → `$EDITOR` → diff → snapshot. knows GUI editors lie about being done and appends `--wait` for you |
 | 06 | **`dt undo <app>`** | restores the previous snapshot. run it twice and you've redone it (this is a feature, legally speaking) |

@@ -44,7 +44,8 @@ ever silently destroys the other side's changes.
 | `dt untrack <app>` | Stop tracking an app; its snapshots stay in git history. |
 | `dt delete <app>` | For orphaned configs: final snapshot, delete the live files from disk, untrack. Refuses (without `--force`) if any file was never snapshotted. |
 | `dt list` | Tracked apps and their files. |
-| `dt backup [app]` | Copy live → store, commit if anything changed. |
+| `dt backup [app]` | Copy live → store, commit if anything changed, then push if a remote is set. |
+| `dt push` | Push the store to its remote. Reports how to add one if there isn't any. |
 | `dt apply [app]` | Copy store → live (commits store state first so the applied version is in history). |
 | `dt diff [app]` | Live vs last snapshot. |
 | `dt edit <app>` | Snapshot, open `$EDITOR` on the live file, show diff, snapshot again. |
@@ -62,6 +63,9 @@ ever silently destroys the other side's changes.
 3. `git add -A && git commit` with a timestamp message — or report
    "nothing changed" and exit without committing.
 4. Print what changed.
+5. If something was committed and a remote is configured, push. A failed push
+   warns but does not fail the backup: the snapshot is already safe locally,
+   and the next backup pushes the backlog.
 
 ## Safety (trust boundaries — never simplify away)
 
@@ -69,9 +73,12 @@ ever silently destroys the other side's changes.
   `~/.netrc`, `gh/hosts.yml`, `*_history`, token-ish filenames) are never
   tracked, even inside a tracked directory. Deny-lists are incomplete by
   nature, which is why:
-- **Local only**: no remote, no push command. A deny-list miss stays on this
-  machine. Adding a remote later is a deliberate manual git operation,
-  preceded by an audit of repo contents.
+- **Remote is opt-in and manual**: `dt` never adds, changes, or removes a
+  remote — you do that with plain git, after auditing what is in the repo.
+  `dt push` and the push at the end of `dt backup` only fire when a remote
+  already exists, so a store with no remote behaves exactly as before.
+  The remote **must be private**: this used to be "local only, so a deny-list
+  miss stays on this machine", and that mitigation is gone.
 - **Junk guards**: per-file size cap (~1 MB) and binary skip, so caches and
   databases never bloat the repo.
 - **Live files are only written by `dt apply`** (and `dt edit` via `$EDITOR`).
@@ -87,5 +94,9 @@ ever silently destroys the other side's changes.
 
 - Structured `dt get` / `dt set` for TOML/JSON configs
 - `dt trace <app>` — find configs by watching file access (`fs_usage`)
-- Content-scanning for secret patterns as a warning layer
-- Remote backup (private repo) with pre-push audit
+- Content-scanning for secret patterns as a warning layer — more valuable now
+  that the store can leave the machine
+- ~~Remote backup (private repo)~~ — done, 2026-07-28. The pre-push audit was
+  deliberately not built: the audit happened once, by hand, before the remote
+  was added, and re-running it on every push is the kind of thing that gets
+  skipped rather than read.

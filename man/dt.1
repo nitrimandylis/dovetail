@@ -37,7 +37,12 @@ List tracked apps and their files.
 .B backup [\fIapp\fR]
 Snapshot live files into
 .I ~/.dotfiles
-(a git commit).
+(a git commit). If the store has a remote configured, also push.
+.TP
+.B push
+Push the store to its remote. Does nothing if you have not configured one;
+.B dt
+never adds or changes the remote itself. Use a private repository.
 .TP
 .B apply [\fIapp\fR]
 Push store copies out to the live locations.

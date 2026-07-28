@@ -33,8 +33,10 @@ export function storeToLive(storePath: string): string {
 
 // ---------- secrets deny-list ----------
 // Trust boundary: these never enter the repo, even inside a tracked directory.
-// A deny-list is incomplete by nature — the mitigation is that the store is
-// local-only (no remote, no push). See PRODUCT.md.
+// A deny-list is incomplete by nature. This used to be mitigated by the store
+// being local-only; it isn't any more (see the remote section below), so the
+// remote MUST be a private repo and a deny-list miss is now a real leak.
+// See PRODUCT.md.
 
 export function isDenied(livePath: string): boolean {
   const rel = path.relative(HOME, livePath);
@@ -123,6 +125,23 @@ export function headContent(liveFile: string): Buffer | null {
   const rel = "home/" + path.relative(HOME, liveFile);
   const r = spawnSync("git", ["-C", STORE, "show", `HEAD:${rel}`]);
   return r.status === 0 ? Buffer.from(r.stdout) : null;
+}
+
+// ---------- remote ----------
+// A remote is opt-in: you add it yourself with plain git, after checking what is
+// in the repo. dt only ever pushes to one that already exists, and never adds,
+// changes, or removes it.
+
+export function remoteName(): string | null {
+  const out = git(["remote"], true).trim();
+  return out === "" ? null : out.split("\n")[0];
+}
+
+// Push the current branch. `-u` so this also works on a store that has a remote
+// but no upstream set yet. Returns null on success, else git's error output.
+export function tryPush(remote: string): string | null {
+  const r = spawnSync("git", ["-C", STORE, "push", "-u", remote, "HEAD"], { encoding: "utf8" });
+  return r.status === 0 ? null : r.stderr.trim() || "git push failed";
 }
 
 // ---------- manifest ----------

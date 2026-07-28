@@ -15,6 +15,7 @@ const HELP = `dovetail (dt) — find, back up, and edit app configs safely
   dt delete <app>        snapshot, then delete an orphaned config from disk
   dt list                tracked apps and their files
   dt backup [app]        snapshot live files into ~/.dotfiles (a git commit)
+  dt push                push the store to its remote, if you have set one
   dt apply [app]         push store copies out to the live locations
   dt diff [app]          live files vs last snapshot
   dt edit <app>          snapshot, open $EDITOR on the live files, snapshot again
@@ -101,6 +102,27 @@ function cmdBackup(app: string | undefined, force: boolean, message?: string): v
     console.log(`skipped ${skipped.length}:`);
     for (const [file, reason] of skipped) console.log(`  ${file}  (${reason})`);
   }
+  if (committed) cmdPush(true); // quiet: a local-only store must not nag on every backup
+}
+
+// Push the store to its remote. No remote is the normal case, not an error, so
+// a backup on a local-only store stays silent about it.
+// ponytail: a failed push only warns — the snapshot is already committed
+// locally, which is the part that must not be lost. Retry is the next backup.
+function cmdPush(quiet: boolean): void {
+  store.ensureStore();
+  const remote = store.remoteName();
+  if (remote === null) {
+    if (!quiet) {
+      console.log("no remote configured. the store is local-only until you add one:");
+      console.log(`  git -C ${store.STORE} remote add origin <url>`);
+      console.log("  use a PRIVATE repo — the secrets deny-list is not airtight.");
+    }
+    return;
+  }
+  const err = store.tryPush(remote);
+  if (err === null) console.log(`pushed to ${remote}`);
+  else console.error(`push to ${remote} failed (the snapshot is safe locally):\n${err}`);
 }
 
 function cmdApply(app: string | undefined, force: boolean): void {
@@ -351,6 +373,7 @@ try {
     case "delete": cmdDelete(args[0], force); break;
     case "list": cmdList(); break;
     case "backup": cmdBackup(args[0], force); break;
+    case "push": cmdPush(false); break;
     case "apply": cmdApply(args[0], force); break;
     case "diff": cmdDiff(args[0]); break;
     case "edit": cmdEdit(args[0]); break;
