@@ -324,10 +324,21 @@ function cmdFind(app: string | undefined): void {
   );
 }
 
+// What launchd should actually run. Compiled with `bun build --compile`, the
+// binary runs itself and takes the command straight away. From source it is bun
+// followed by the script path. import.meta.dir points inside bun's embedded
+// filesystem in the compiled case, so "is the script really on disk" separates
+// the two. Getting this wrong is invisible: dt would receive the bogus script
+// path as its command, print the help text, and exit 0 every single day.
+export function scheduleProgramArgs(execPath: string, scriptPath: string): string[] {
+  return fs.existsSync(scriptPath) ? [execPath, scriptPath, "backup"] : [execPath, "backup"];
+}
+
 function cmdInstallSchedule(): void {
   const label = "dev.nick.dt-backup";
   const logFile = path.join(store.STORE, ".dt-backup.log");
   const plistPath = path.join(store.HOME, "Library", "LaunchAgents", `${label}.plist`);
+  const args = scheduleProgramArgs(process.execPath, path.join(import.meta.dir, "dt.ts"));
   const plist = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -335,9 +346,7 @@ function cmdInstallSchedule(): void {
   <key>Label</key><string>${label}</string>
   <key>ProgramArguments</key>
   <array>
-    <string>${process.execPath}</string>
-    <string>${path.join(import.meta.dir, "dt.ts")}</string>
-    <string>backup</string>
+${args.map((a) => `    <string>${a}</string>`).join("\n")}
   </array>
   <key>StartCalendarInterval</key>
   <dict><key>Hour</key><integer>12</integer><key>Minute</key><integer>0</integer></dict>

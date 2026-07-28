@@ -28,6 +28,17 @@ test("GUI editors get a wait flag, terminal editors don't", async () => {
   expect(editorCommand("vim")).toEqual(["vim"]);
 });
 
+test("the schedule runs the compiled binary directly, the script only if it exists", async () => {
+  const { scheduleProgramArgs } = await import("./dt");
+  const realScript = path.join(import.meta.dir, "dt.ts");
+  expect(scheduleProgramArgs("/usr/bin/bun", realScript)).toEqual(["/usr/bin/bun", realScript, "backup"]);
+  // compiled: import.meta.dir points into bun's embedded fs, so no script on disk
+  expect(scheduleProgramArgs("/Users/x/.bun/bin/dt", "/$bunfs/root/dt.ts")).toEqual([
+    "/Users/x/.bun/bin/dt",
+    "backup",
+  ]);
+});
+
 test("dotfile names map to app names", () => {
   expect(appNameFromDotfile(".zshrc")).toBe("zsh");
   expect(appNameFromDotfile(".gitconfig")).toBe("git");
