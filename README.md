@@ -61,11 +61,19 @@ You need [bun](https://bun.sh) and a Mac. That's the whole list.
 ```bash
 git clone https://github.com/nitrimandylis/dovetail.git
 cd dovetail
-bun run compile   # → ~/.bun/bin/dt, and man dt into your manpath
+bun run compile   # → ~/.bun/bin/dt, man dt, and the agent skill
 man dt            # the eleven commands + --force, offline
 ```
 
 Then `dt scan` to track everything, `dt install-schedule` for a silent daily backup at noon, and forget it exists until the day you break your zshrc — which is the day it earns its keep.
+
+## 🤖 The agent skill
+
+`dovetail-cli/SKILL.md` is an agent skill for driving `dt` — that snapshotting comes before editing, why the conflict refusal is correct and what `--force` is really overriding, and that `undo` is a toggle rather than a stack. The traps that don't fit in
+`--help`, in other words. `bun run compile` copies it into `~/.claude/skills/`.
+
+It's a plain directory at the repo root rather than a `.claude/` one, because this repo is public and
+not everyone drives it with the same agent. Point yours at the file.
 
 ## 🔩 Under the hood
 
