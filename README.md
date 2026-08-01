@@ -69,11 +69,9 @@ Then `dt scan` to track everything, `dt install-schedule` for a silent daily bac
 
 ## 🤖 The agent skill
 
-`dovetail-cli/SKILL.md` is an agent skill for driving `dt` — that snapshotting comes before editing, why the conflict refusal is correct and what `--force` is really overriding, and that `undo` is a toggle rather than a stack. The traps that don't fit in
-`--help`, in other words. `bun run compile` copies it into `~/.claude/skills/`.
+`dovetail-cli/SKILL.md` is an agent skill for driving `dt` — that snapshotting comes before editing, why the conflict refusal is correct and what `--force` is really overriding, and that `undo` is a toggle rather than a stack. The traps that don't fit in `--help`, in other words. `bun run compile` copies it into `~/.claude/skills/`.
 
-It's a plain directory at the repo root rather than a `.claude/` one, because this repo is public and
-not everyone drives it with the same agent. Point yours at the file.
+It's a plain directory at the repo root rather than a `.claude/` one, because this repo is public and not everyone drives it with the same agent. Point yours at the file.
 
 ## 🔩 Under the hood
 
