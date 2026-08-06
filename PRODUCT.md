@@ -3,7 +3,7 @@
 A personal CLI for finding, backing up, and safely editing the configs and
 dotfiles of apps and CLI tools. Single machine (this Mac), single user (Nick).
 Built with Bun + TypeScript, zero dependencies, installed globally via
-`bun link` so `dt` works from zsh anywhere.
+`bun run compile` so `dt` works from any shell.
 
 ## Why it exists
 
@@ -88,7 +88,7 @@ ever silently destroys the other side's changes.
 
 - [x] Design settled (see decisions above)
 - [x] v1 implemented — `dt.ts` (commands), `store.ts` (store/git/guards),
-      `discover.ts` (scan/find), `dt.test.ts` (checks). Installed via `bun link`.
+      `discover.ts` (scan/find), `dt.test.ts` (checks). Installed via `bun run compile`.
 
 ## Roadmap (v2, only if actually missed)
 

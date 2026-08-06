@@ -23,7 +23,8 @@ const HELP = `dovetail (dt) — find, back up, and edit app configs safely
   dt open                open the ~/.dotfiles store in Finder
   dt install-schedule    silent daily backup via launchd
 
-  --force                override a safety refusal (backup / apply / undo)`;
+  --force                override a safety refusal (backup / apply / undo)
+  --json                 machine-readable output (list / diff / find)`;
 
 function fail(msg: string): never {
   console.error(msg);
@@ -149,8 +150,34 @@ function cmdApply(app: string | undefined, force: boolean): void {
   console.log(copied > 0 ? `updated ${copied} live file(s)` : "live files already match the store");
 }
 
-function cmdDiff(app: string | undefined): void {
+/**
+ * Per-path drift, without producing a patch.
+ *
+ * `dt diff` itself shells out to `git diff` and inherits its stdio, which is
+ * right for a human and useless to a consumer: the payload is a patch on the
+ * terminal, not something on stdout to parse. This reports the state only.
+ */
+function diffStates(app: string | undefined): { app: string; file: string; state: string }[] {
+  const m = store.readManifest();
+  const out: { app: string; file: string; state: string }[] = [];
+  for (const a of targetApps(m, app)) {
+    for (const p of m[a].map(store.untildeify)) {
+      const storePath = store.liveToStore(p);
+      if (!fs.existsSync(storePath)) {
+        out.push({ app: a, file: store.tildeify(p), state: "never-backed-up" });
+        continue;
+      }
+      // --quiet exits 1 when they differ, which is the whole question here.
+      const r = spawnSync("git", ["-C", store.STORE, "diff", "--no-index", "--quiet", "--", storePath, p]);
+      out.push({ app: a, file: store.tildeify(p), state: r.status === 0 ? "same" : "changed" });
+    }
+  }
+  return out;
+}
+
+function cmdDiff(app: string | undefined, json = false): void {
   store.ensureStore();
+  if (json) return void console.log(JSON.stringify(diffStates(app)));
   const m = store.readManifest();
   for (const p of livePathsOf(m, targetApps(m, app))) {
     const storePath = store.liveToStore(p);
@@ -279,10 +306,19 @@ function cmdDelete(app: string | undefined, force: boolean): void {
   console.log(`deleted ${m[app].join(", ")} from disk.`);
 }
 
-function cmdList(): void {
+function cmdList(json = false): void {
   store.ensureStore();
   const m = store.readManifest();
   const apps = Object.keys(m);
+  // An empty manifest is an error for a human, who wants telling what to run
+  // next, but an empty array for a consumer, which is a fact and not a failure.
+  if (json) {
+    return void console.log(JSON.stringify(apps.map((app) => ({
+      app,
+      paths: m[app],
+      files: m[app].flatMap((p) => store.walkFiles(store.untildeify(p))).length,
+    }))));
+  }
   if (apps.length === 0) fail("nothing tracked yet. run: dt scan  (or dt add)");
   for (const app of apps) {
     const count = m[app].flatMap((p) => store.walkFiles(store.untildeify(p))).length;
@@ -290,10 +326,21 @@ function cmdList(): void {
   }
 }
 
-function cmdFind(app: string | undefined): void {
+function cmdFind(app: string | undefined, json = false): void {
   if (app === undefined) fail("usage: dt find <app>");
   const f = discover.findConfig(app);
   let foundAnything = false;
+
+  if (json) {
+    const mentioned = f.mentions.filter((m) => !f.hits.includes(m.path));
+    return void console.log(JSON.stringify({
+      app,
+      hits: f.hits.map(store.tildeify),
+      plists: f.plists.map(store.tildeify),
+      mentions: mentioned.map((m) => ({ path: store.tildeify(m.path), exists: m.exists })),
+      found: f.hits.length > 0 || f.plists.length > 0 || mentioned.some((m) => m.exists),
+    }));
+  }
 
   console.log("conventional paths:");
   for (const p of f.hits) {
@@ -334,8 +381,13 @@ export function scheduleProgramArgs(execPath: string, scriptPath: string): strin
   return fs.existsSync(scriptPath) ? [execPath, scriptPath, "backup"] : [execPath, "backup"];
 }
 
+// The label this used to install. Kept only so an existing install can be
+// retired: leaving it loaded would run a second daily backup under the old
+// plist, which looks like nothing at all until the log has two entries a day.
+const OLD_SCHEDULE_LABEL = "dev.nick.dt-backup";
+
 function cmdInstallSchedule(): void {
-  const label = "dev.nick.dt-backup";
+  const label = "dev.dovetail.backup";
   const logFile = path.join(store.STORE, ".dt-backup.log");
   const plistPath = path.join(store.HOME, "Library", "LaunchAgents", `${label}.plist`);
   const args = scheduleProgramArgs(process.execPath, path.join(import.meta.dir, "dt.ts"));
@@ -358,6 +410,16 @@ ${args.map((a) => `    <string>${a}</string>`).join("\n")}
   store.ensureStore();
   fs.mkdirSync(path.dirname(plistPath), { recursive: true });
   fs.writeFileSync(plistPath, plist);
+
+  // Retire the pre-rename install before loading the new one, so a machine that
+  // had the old label ends up with one scheduled backup rather than two.
+  const oldPlist = path.join(store.HOME, "Library", "LaunchAgents", `${OLD_SCHEDULE_LABEL}.plist`);
+  if (fs.existsSync(oldPlist)) {
+    spawnSync("launchctl", ["unload", oldPlist]);
+    fs.rmSync(oldPlist);
+    console.log(`removed the old ${OLD_SCHEDULE_LABEL} schedule`);
+  }
+
   spawnSync("launchctl", ["unload", plistPath]); // ok to fail on first install
   const r = spawnSync("launchctl", ["load", plistPath], { encoding: "utf8" });
   if (r.status !== 0) fail(`launchctl load failed:\n${r.stderr}`);
@@ -371,20 +433,21 @@ if (import.meta.main) main();
 function main(): void {
 const argv = process.argv.slice(2);
 const force = argv.includes("--force");
+const json = argv.includes("--json");
 const [cmd, ...args] = argv.filter((a) => !a.startsWith("--"));
 
 try {
   switch (cmd) {
-    case "find": cmdFind(args[0]); break;
+    case "find": cmdFind(args[0], json); break;
     case "scan": cmdScan(); break;
     case "add": cmdAdd(args[0], args.slice(1)); break;
     case "untrack": cmdUntrack(args[0]); break;
     case "delete": cmdDelete(args[0], force); break;
-    case "list": cmdList(); break;
+    case "list": cmdList(json); break;
     case "backup": cmdBackup(args[0], force); break;
     case "push": cmdPush(false); break;
     case "apply": cmdApply(args[0], force); break;
-    case "diff": cmdDiff(args[0]); break;
+    case "diff": cmdDiff(args[0], json); break;
     case "edit": cmdEdit(args[0]); break;
     case "undo": cmdUndo(args[0], force); break;
     case "open": store.ensureStore(); spawnSync("open", [store.STORE]); break;

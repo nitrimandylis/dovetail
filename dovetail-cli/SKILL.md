@@ -29,6 +29,10 @@ thing dovetail does for an agent: it makes an edit reversible before you make it
 dt list             # tracked apps and their files
 dt find <app>       # locate a config: conventional paths, then the man page's FILES section
 dt diff [app]       # live files vs last snapshot, straight from git diff
+
+dt list --json      # [{app, paths, files}] — empty array when nothing is tracked
+dt find <app> --json# {app, hits, plists, mentions: [{path, exists}], found}
+dt diff [app] --json# [{app, file, state}] — state is same | changed | never-backed-up
 ```
 
 `dt find` is the right first move whenever the question is "where does <app> keep its settings". It
@@ -53,6 +57,13 @@ dt install-schedule    # silent daily backup via launchd
 running either.
 
 ## Things that will bite you
+
+- **`dt diff --json` is not the patch.** Plain `dt diff` streams `git diff` to
+  the terminal and puts nothing parseable on stdout, so `--json` reports each
+  file's state instead. If the user wants to see the actual changes, hand them
+  `dt diff <app>` to run themselves.
+- **`dt list` with nothing tracked errors for a human and returns `[]` for
+  `--json`.** An empty array is the real answer, not a failed call.
 
 - **The conflict rule is load bearing.** If both the live file and the store changed since the last
   snapshot, `dt` refuses and makes you pick a direction. That refusal is correct — neither side silently

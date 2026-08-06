@@ -49,7 +49,7 @@ conventional paths:
 | 04 | **`dt apply [app]`** | pushes store copies out to the live locations — hand-edit `~/.dotfiles`, run this, done |
 | 05 | **`dt edit <app>`** | snapshot → `$EDITOR` → diff → snapshot. knows GUI editors lie about being done and appends `--wait` for you |
 | 06 | **`dt undo <app>`** | restores the previous snapshot. run it twice and you've redone it (this is a feature, legally speaking) |
-| 07 | **`dt diff [app]`** | live files vs last snapshot, straight from `git diff` |
+| 07 | **`dt diff [app]`** | live files vs last snapshot, straight from `git diff`. `--json` reports each file's state instead, for scripts |
 | 08 | **`dt delete <app>`** | final snapshot, then removes an orphaned config from disk — refuses if any file was never snapshotted |
 | 09 | **`dt open`** | opens the store in finder, for when you'd rather click |
 | 10 | **conflict rule** | if live *and* store both changed since the last snapshot, dt refuses and makes you pick a direction — neither side silently loses |

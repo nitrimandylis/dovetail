@@ -67,6 +67,46 @@ Silent daily backup via launchd.
 .TP
 .B \-\-force
 Override a safety refusal (backup / apply / undo).
+.TP
+.B \-\-json
+Machine-readable output for
+.BR list ", " diff " and " find .
+See
+.B JSON OUTPUT
+below.
+.SH JSON OUTPUT
+With
+.BR \-\-json ,
+stdout carries exactly one JSON value and nothing else; errors stay on stderr
+with a non-zero exit status.
+.TP
+.B dt list \-\-json
+An array of
+.IR "{app, paths, files}" .
+Unlike the human output, an empty manifest is an empty array rather than an
+error: nothing tracked is a fact, not a failure.
+.TP
+.B dt diff [\fIapp\fB] \-\-json
+An array of
+.IR "{app, file, state}" ,
+where
+.I state
+is
+.BR same ", " changed " or " never-backed-up .
+This reports drift only. It does not produce a patch, because the human
+.B diff
+streams
+.BR git-diff (1)
+straight to the terminal rather than to stdout.
+.TP
+.B dt find \fIapp\fB \-\-json
+One object:
+.IR app ", " hits ", " plists ", "
+.I mentions
+(an array of
+.IR "{path, exists}" )
+and
+.IR found .
 .SH FILES
 .TP
 .I ~/.dotfiles

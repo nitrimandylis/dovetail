@@ -8,8 +8,9 @@ recorded there.
 - Bun + TypeScript. Zero runtime dependencies — arg parsing via
   `node:util` `parseArgs`, file ops via `node:fs`, git via `Bun.spawn`.
   Ask before adding any dependency.
-- Global install is `bun link` (binary name `dt`). Never instruct running
-  scripts by path; the tool is used from zsh anywhere.
+- Global install is `bun run compile` (binary name `dt`), which also installs
+  the man page and the agent skill. Never instruct running scripts by path; the
+  tool is used from a shell anywhere.
 - Code at IB-CS-student level: plain, explicit, defensible line-by-line.
   No clever one-liners, no generics gymnastics.
 
