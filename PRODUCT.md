@@ -51,7 +51,12 @@ ever silently destroys the other side's changes.
 | `dt edit <app>` | Snapshot, open `$EDITOR` on the live file, show diff, snapshot again. |
 | `dt undo <app>` | Restore the pre-edit snapshot. |
 | `dt open` | Open the `~/.dotfiles` store in Finder. |
-| `dt install-schedule` | Write a launchd agent that runs a silent daily `dt backup`. |
+| `dt install-schedule` | Write a launchd agent (`dev.dovetail.backup`) that runs a silent daily `dt backup`. |
+
+`dt list`, `dt find` and `dt diff` take `--json` for scripts: one JSON value on
+stdout, errors on stderr with a non-zero exit. `dt diff --json` reports each
+file's state (`same` / `changed` / `never-backed-up`) rather than a patch,
+because the human `diff` streams `git diff` straight to the terminal.
 
 ## What `dt backup` does, exactly
 
