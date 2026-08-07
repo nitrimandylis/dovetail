@@ -3,6 +3,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { parseArgs } from "node:util";
 import * as store from "./store";
 import * as discover from "./discover";
 
@@ -24,7 +25,8 @@ const HELP = `dovetail (dt) — find, back up, and edit app configs safely
   dt install-schedule    silent daily backup via launchd
 
   --force                override a safety refusal (backup / apply / undo)
-  --json                 machine-readable output (list / diff / find)`;
+  --json                 machine-readable output (list / diff / find)
+  --help, -h             show this text and do nothing else`;
 
 function fail(msg: string): never {
   console.error(msg);
@@ -431,10 +433,36 @@ ${args.map((a) => `    <string>${a}</string>`).join("\n")}
 if (import.meta.main) main();
 
 function main(): void {
-const argv = process.argv.slice(2);
-const force = argv.includes("--force");
-const json = argv.includes("--json");
-const [cmd, ...args] = argv.filter((a) => !a.startsWith("--"));
+// parseArgs is strict: an unknown flag throws instead of being silently
+// dropped, which is what used to let `dt install-schedule --help` run the
+// install. Every flag a command accepts has to be declared here.
+let values, positionals;
+try {
+  ({ values, positionals } = parseArgs({
+    args: process.argv.slice(2),
+    options: {
+      force: { type: "boolean", default: false },
+      json: { type: "boolean", default: false },
+      help: { type: "boolean", short: "h", default: false },
+    },
+    strict: true,
+    allowPositionals: true,
+  }));
+} catch (e) {
+  // parseArgs's own message advises using "--", which is not what a typo needs.
+  const flag = e instanceof Error ? e.message.match(/'(-[^']+)'/)?.[1] : null;
+  fail(flag ? `unknown flag: ${flag}\ndt --help lists the flags` : String(e));
+}
+
+// --help never runs a command, whatever it is paired with.
+if (values.help || positionals.length === 0) {
+  console.log(HELP);
+  return;
+}
+
+const force = values.force;
+const json = values.json;
+const [cmd, ...args] = positionals;
 
 try {
   switch (cmd) {
@@ -452,7 +480,9 @@ try {
     case "undo": cmdUndo(args[0], force); break;
     case "open": store.ensureStore(); spawnSync("open", [store.STORE]); break;
     case "install-schedule": cmdInstallSchedule(); break;
-    default: console.log(HELP);
+    // An unknown command used to print help and exit 0, so a typo in a script
+    // looked like success. It is an error.
+    default: fail(`unknown command: ${cmd}\n\n${HELP}`);
   }
 } catch (e) {
   fail(e instanceof Error ? e.message : String(e));

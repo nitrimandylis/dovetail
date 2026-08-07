@@ -150,3 +150,35 @@ test("apply refuses a conflict, obeys --force; backup refuses a dirty store", ()
   expect(dt(env, "apply", "--force").status).toBe(0);
   expect(fs.readFileSync(path.join(home, ".zshrc"), "utf8")).toBe("store-edit\n");
 });
+
+// A flag must never be silently dropped: `dt install-schedule --help` used to
+// ignore --help and perform the install. `list` stands in for every command
+// here because the --help check sits before the dispatch switch, so proving it
+// for one command proves the mechanism; and `list` is read-only if it regresses.
+test("--help prints help instead of running the command", () => {
+  const script = path.join(import.meta.dir, "dt.ts");
+  const run = (args: string[]) =>
+    spawnSync("bun", [script, ...args], { encoding: "utf8" });
+
+  for (const flag of ["--help", "-h"]) {
+    const r = run(["list", flag]);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("dovetail (dt) — find, back up, and edit app configs safely");
+    // help is the whole output: nothing was printed after it, so `list` never ran
+    expect(r.stdout.trim().endsWith("show this text and do nothing else")).toBe(true);
+  }
+
+  // bare `dt` still prints help
+  expect(run([]).status).toBe(0);
+  expect(run([]).stdout).toContain("dovetail (dt)");
+
+  // an unknown flag is an error, not something to shrug off
+  const bad = run(["backup", "--frce"]);
+  expect(bad.status).toBe(1);
+  expect(bad.stderr).toContain("--frce");
+
+  // an unknown command used to exit 0, so a typo looked like success
+  const typo = run(["backpu"]);
+  expect(typo.status).toBe(1);
+  expect(typo.stderr).toContain("unknown command: backpu");
+});

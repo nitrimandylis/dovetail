@@ -64,6 +64,10 @@ running either.
   `dt diff <app>` to run themselves.
 - **`dt list` with nothing tracked errors for a human and returns `[]` for
   `--json`.** An empty array is the real answer, not a failed call.
+- **`--help` is safe on every command, and unknown flags are rejected.** Before
+  2026-08-07 flags were filtered out unparsed, so `dt install-schedule --help`
+  silently performed the install and a typo like `--frce` was ignored. Both now
+  exit without running anything.
 
 - **The conflict rule is load bearing.** If both the live file and the store changed since the last
   snapshot, `dt` refuses and makes you pick a direction. That refusal is correct — neither side silently
