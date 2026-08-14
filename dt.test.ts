@@ -6,7 +6,7 @@ import path from "node:path";
 import os from "node:os";
 import { spawnSync } from "node:child_process";
 import { isDenied, HOME } from "./store";
-import { appNameFromDotfile } from "./discover";
+import { appNameFromDotfile, extractPaths } from "./discover";
 
 test("deny-list blocks secrets, allows configs", () => {
   expect(isDenied(path.join(HOME, ".aws/credentials"))).toBe(true);
@@ -18,6 +18,20 @@ test("deny-list blocks secrets, allows configs", () => {
   expect(isDenied(path.join(HOME, ".ssh/config"))).toBe(false);
   expect(isDenied(path.join(HOME, ".zshrc"))).toBe(false);
   expect(isDenied(path.join(HOME, ".config/gh/config.yml"))).toBe(false);
+});
+
+test("man-page paths drop sentence punctuation and duplicates", () => {
+  const text = [
+    "Config is read from ~/.config/ghostty/config.",
+    "Themes live in ~/.config/ghostty/themes; see also $XDG_CONFIG_HOME/ghostty,",
+    "and again ~/.config/ghostty/config for good measure.",
+  ].join("\n");
+
+  expect(extractPaths(text, "/home/x")).toEqual([
+    "/home/x/.config/ghostty/config",
+    "/home/x/.config/ghostty/themes",
+    "/home/x/.config/ghostty",
+  ]);
 });
 
 test("GUI editors get a wait flag, terminal editors don't", async () => {

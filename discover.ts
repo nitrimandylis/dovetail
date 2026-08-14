@@ -115,16 +115,28 @@ function pathMentions(app: string): { path: string; exists: boolean }[] {
     text += "\n" + (help.stdout ?? "") + (help.stderr ?? "");
   }
 
+  return extractPaths(text, HOME)
+    .slice(0, 12)
+    .map((p) => ({ path: p, exists: fs.existsSync(p) }));
+}
+
+/**
+ * The pure half of the grep, split out so it can be tested without running
+ * `man`. Man pages end sentences with the path itself ("...lives in
+ * ~/.config/app."), so a trailing period is punctuation, not a filename.
+ */
+export function extractPaths(text: string, home: string): string[] {
   const re = /(?:~|\$HOME|\$XDG_CONFIG_HOME)\/[\w.\-/]+/g;
   const seen = new Set<string>();
-  const out: { path: string; exists: boolean }[] = [];
+  const out: string[] = [];
   for (const match of text.match(re) ?? []) {
     const expanded = match
-      .replace(/^\$XDG_CONFIG_HOME/, path.join(HOME, ".config"))
-      .replace(/^(?:~|\$HOME)/, HOME);
+      .replace(/[.,;:]+$/, "")
+      .replace(/^\$XDG_CONFIG_HOME/, path.join(home, ".config"))
+      .replace(/^(?:~|\$HOME)/, home);
     if (seen.has(expanded)) continue;
     seen.add(expanded);
-    out.push({ path: expanded, exists: fs.existsSync(expanded) });
+    out.push(expanded);
   }
-  return out.slice(0, 12);
+  return out;
 }
