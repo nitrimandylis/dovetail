@@ -187,10 +187,20 @@ function cmdDiff(app: string | undefined, json = false): void {
       console.log(`${store.tildeify(p)}: never backed up`);
       continue;
     }
+    // Run from HOME with relative paths so the header reads
+    // "snapshot/.dotfiles/home/.zshrc  live/.zshrc" instead of two absolute
+    // paths that wrap. Both sides are always under HOME.
     // exits 1 when files differ — that's normal for diff
-    spawnSync("git", ["-C", store.STORE, "diff", "--no-index", "--", storePath, p], {
-      stdio: "inherit",
-    });
+    spawnSync(
+      "git",
+      [
+        "-C", store.HOME,
+        "diff", "--no-index",
+        "--src-prefix=snapshot/", "--dst-prefix=live/",
+        "--", path.relative(store.HOME, storePath), path.relative(store.HOME, p),
+      ],
+      { stdio: "inherit" },
+    );
   }
 }
 
