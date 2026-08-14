@@ -19,6 +19,8 @@
 ![remote](https://img.shields.io/badge/remote-none_(that's_the_point)-78716c?style=flat-square&labelColor=111111)
 ![symlinks](https://img.shields.io/badge/symlinks-0._we_copy_like_adults-b45309?style=flat-square&labelColor=111111)
 
+![dovetail](.github/assets/dovetail.gif)
+
 </div>
 
 ---
