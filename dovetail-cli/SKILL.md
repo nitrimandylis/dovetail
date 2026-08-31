@@ -29,6 +29,7 @@ thing dovetail does for an agent: it makes an edit reversible before you make it
 dt list             # tracked apps and their files
 dt find <app>       # locate a config: conventional paths, then the man page's FILES section
 dt diff [app]       # live files vs last snapshot, straight from git diff
+dt open             # open the ~/.dotfiles store in Finder
 
 dt list --json      # [{app, paths, files}] — empty array when nothing is tracked
 dt find <app> --json# {app, hits, plists, mentions: [{path, exists}], found}
