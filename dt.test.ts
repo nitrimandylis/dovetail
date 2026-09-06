@@ -230,3 +230,35 @@ test("untracked paths stay out of scan, and dt add overrides", () => {
 
   fs.rmSync(tmp, { recursive: true, force: true });
 });
+
+test("diff ignores files the guards would never store", () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "dt-diff-"));
+  const store = path.join(tmp, "store");
+  const appDir = path.join(tmp, ".config", "foo");
+  fs.mkdirSync(appDir, { recursive: true });
+  fs.writeFileSync(path.join(appDir, "config.toml"), "color = true\n");
+
+  const dt = (...args: string[]) =>
+    spawnSync("bun", [path.join(import.meta.dir, "dt.ts"), ...args], {
+      env: { ...process.env, DT_HOME: tmp, DT_STORE: store },
+      encoding: "utf8",
+    });
+
+  dt("add", "foo", appDir);
+  const clean = () => JSON.parse(dt("diff", "--json").stdout);
+  expect(clean().every((e: { state: string }) => e.state === "same")).toBe(true);
+
+  // three files copyIn will always skip: deny-listed, binary, oversized
+  fs.writeFileSync(path.join(appDir, "api-token.txt"), "hunter2\n");
+  fs.writeFileSync(path.join(appDir, "icon.png"), Buffer.from([0x89, 0x50, 0x00, 0x01]));
+  fs.writeFileSync(path.join(appDir, "cache.db"), "x".repeat(1024 * 1024 + 1));
+  expect(clean().every((e: { state: string }) => e.state === "same")).toBe(true);
+
+  // a real edit to a tracked file still shows up
+  fs.writeFileSync(path.join(appDir, "config.toml"), "color = false\n");
+  const changed = clean().filter((e: { state: string }) => e.state === "changed");
+  expect(changed).toHaveLength(1);
+  expect(changed[0].file).toBe("~/.config/foo/config.toml");
+
+  fs.rmSync(tmp, { recursive: true, force: true });
+});

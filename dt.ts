@@ -39,6 +39,13 @@ function targetApps(m: store.Manifest, app?: string): string[] {
   return [app];
 }
 
+// Files under a tracked path that the store would really hold: the guards that
+// `copyIn` applies before copying have to apply here too, or `dt diff` reports
+// every deny-listed, oversized and binary file as a permanent change.
+function comparableFiles(livePath: string): string[] {
+  return store.walkFiles(livePath).filter((f) => store.skipReason(f) === null);
+}
+
 function livePathsOf(m: store.Manifest, apps: string[]): string[] {
   return apps.flatMap((a) => m[a].map(store.untildeify));
 }
@@ -164,14 +171,15 @@ function diffStates(app: string | undefined): { app: string; file: string; state
   const out: { app: string; file: string; state: string }[] = [];
   for (const a of targetApps(m, app)) {
     for (const p of m[a].map(store.untildeify)) {
-      const storePath = store.liveToStore(p);
-      if (!fs.existsSync(storePath)) {
-        out.push({ app: a, file: store.tildeify(p), state: "never-backed-up" });
-        continue;
+      for (const file of comparableFiles(p)) {
+        const storePath = store.liveToStore(file);
+        if (!fs.existsSync(storePath)) {
+          out.push({ app: a, file: store.tildeify(file), state: "never-backed-up" });
+          continue;
+        }
+        const same = fs.readFileSync(storePath).equals(fs.readFileSync(file));
+        out.push({ app: a, file: store.tildeify(file), state: same ? "same" : "changed" });
       }
-      // --quiet exits 1 when they differ, which is the whole question here.
-      const r = spawnSync("git", ["-C", store.STORE, "diff", "--no-index", "--quiet", "--", storePath, p]);
-      out.push({ app: a, file: store.tildeify(p), state: r.status === 0 ? "same" : "changed" });
     }
   }
   return out;
@@ -182,25 +190,27 @@ function cmdDiff(app: string | undefined, json = false): void {
   if (json) return void console.log(JSON.stringify(diffStates(app)));
   const m = store.readManifest();
   for (const p of livePathsOf(m, targetApps(m, app))) {
-    const storePath = store.liveToStore(p);
-    if (!fs.existsSync(storePath)) {
-      console.log(`${store.tildeify(p)}: never backed up`);
-      continue;
+    for (const file of comparableFiles(p)) {
+      const storePath = store.liveToStore(file);
+      if (!fs.existsSync(storePath)) {
+        console.log(`${store.tildeify(file)}: never backed up`);
+        continue;
+      }
+      // Run from HOME with relative paths so the header reads
+      // "snapshot/.dotfiles/home/.zshrc  live/.zshrc" instead of two absolute
+      // paths that wrap. Both sides are always under HOME.
+      // exits 1 when files differ — that's normal for diff
+      spawnSync(
+        "git",
+        [
+          "-C", store.HOME,
+          "diff", "--no-index",
+          "--src-prefix=snapshot/", "--dst-prefix=live/",
+          "--", path.relative(store.HOME, storePath), path.relative(store.HOME, file),
+        ],
+        { stdio: "inherit" },
+      );
     }
-    // Run from HOME with relative paths so the header reads
-    // "snapshot/.dotfiles/home/.zshrc  live/.zshrc" instead of two absolute
-    // paths that wrap. Both sides are always under HOME.
-    // exits 1 when files differ — that's normal for diff
-    spawnSync(
-      "git",
-      [
-        "-C", store.HOME,
-        "diff", "--no-index",
-        "--src-prefix=snapshot/", "--dst-prefix=live/",
-        "--", path.relative(store.HOME, storePath), path.relative(store.HOME, p),
-      ],
-      { stdio: "inherit" },
-    );
   }
 }
 

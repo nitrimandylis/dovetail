@@ -19,6 +19,7 @@ Tracked files are mirrored into `~/.dotfiles`, a local git repo:
 ```
 ~/.dotfiles/                git repo (local only, no remote)
   manifest.json             { "app": ["~/path", ...], ... }
+  ignore.json               ["~/path", ...] — paths `dt scan` must not re-add
   home/.zshrc               mirror of ~/.zshrc
   home/.config/nvim/...     mirror of ~/.config/nvim/...
 ```
@@ -56,7 +57,11 @@ ever silently destroys the other side's changes.
 `dt list`, `dt find` and `dt diff` take `--json` for scripts: one JSON value on
 stdout, errors on stderr with a non-zero exit. `dt diff --json` reports each
 file's state (`same` / `changed` / `never-backed-up`) rather than a patch,
-because the human `diff` streams `git diff` straight to the terminal.
+because the human `diff` streams `git diff` straight to the terminal. Both forms
+compare **individual files**, filtered through the same guards as `copyIn` —
+comparing whole manifest directories instead reported every deny-listed, binary
+and oversized file as a permanent change, which on a real store meant 269
+phantom entries hiding the one that had actually drifted.
 
 ## What `dt backup` does, exactly
 
