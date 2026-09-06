@@ -196,3 +196,37 @@ test("--help prints help instead of running the command", () => {
   expect(typo.status).toBe(1);
   expect(typo.stderr).toContain("unknown command: backpu");
 });
+
+test("untracked paths stay out of scan, and dt add overrides", () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "dt-ignore-"));
+  const store = path.join(tmp, "store");
+  fs.mkdirSync(path.join(tmp, ".config", "ghostty"), { recursive: true });
+  fs.writeFileSync(path.join(tmp, ".config", "ghostty", "config"), "theme = x\n");
+  fs.writeFileSync(path.join(tmp, ".rmapi"), '{"devicetoken":"live"}\n');
+
+  const dt = (...args: string[]) =>
+    spawnSync("bun", [path.join(import.meta.dir, "dt.ts"), ...args], {
+      env: { ...process.env, DT_HOME: tmp, DT_STORE: store },
+      encoding: "utf8",
+    });
+
+  // scan picks both up; .rmapi passes the deny-list because its name has no secret word
+  dt("scan");
+  expect(Object.keys(JSON.parse(fs.readFileSync(path.join(store, "manifest.json"), "utf8"))))
+    .toEqual(expect.arrayContaining(["ghostty", "rmapi"]));
+
+  // untrack records the decision, and a second scan must not undo it
+  dt("untrack", "rmapi");
+  expect(JSON.parse(fs.readFileSync(path.join(store, "ignore.json"), "utf8"))).toContain("~/.rmapi");
+  dt("scan");
+  const after = JSON.parse(fs.readFileSync(path.join(store, "manifest.json"), "utf8"));
+  expect(after).not.toHaveProperty("rmapi");
+  expect(after).toHaveProperty("ghostty"); // unrelated entries survive
+
+  // an explicit add wins and clears the ignore entry
+  dt("add", "rmapi", "~/.rmapi");
+  expect(JSON.parse(fs.readFileSync(path.join(store, "manifest.json"), "utf8"))).toHaveProperty("rmapi");
+  expect(JSON.parse(fs.readFileSync(path.join(store, "ignore.json"), "utf8"))).not.toContain("~/.rmapi");
+
+  fs.rmSync(tmp, { recursive: true, force: true });
+});

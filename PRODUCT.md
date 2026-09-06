@@ -40,8 +40,8 @@ ever silently destroys the other side's changes.
 |---|---|
 | `dt find <app>` | Locate an app's config: probe conventional paths (`~/.config/<app>`, `~/.<app>rc`, `~/.<app>`, `~/Library/Application Support/<app>`, Preferences) and grep its man page / `--help` for a FILES section. |
 | `dt scan` | Sweep the dotfile zones (`~/.config/*`, `~/.*` rc-style files) and auto-track everything that passes the guards (see Safety). `~/Library` is find-only. |
-| `dt add <app> [paths…]` | Track an app manually — needed for anything outside the scan zones. |
-| `dt untrack <app>` | Stop tracking an app; its snapshots stay in git history. |
+| `dt add <app> [paths…]` | Track an app manually — needed for anything outside the scan zones. An explicit add overrides the ignore list. |
+| `dt untrack <app>` | Stop tracking an app; its snapshots stay in git history, and its paths go on the ignore list so `dt scan` cannot re-add them. |
 | `dt delete <app>` | For orphaned configs: final snapshot, delete the live files from disk, untrack. Refuses (without `--force`) if any file was never snapshotted. |
 | `dt list` | Tracked apps and their files. |
 | `dt backup [app]` | Copy live → store, commit if anything changed, then push if a remote is set. |
@@ -86,6 +86,14 @@ because the human `diff` streams `git diff` straight to the terminal.
   miss stays on this machine", and that mitigation is gone.
 - **Junk guards**: per-file size cap (~1 MB) and binary skip, so caches and
   databases never bloat the repo.
+- **Ignore list** (`~/.dotfiles/ignore.json`, versioned with the store):
+  `dt untrack` records the paths it dropped, and `dt scan` skips them. Without
+  it the manifest was the only record of an untrack and `dt scan` overwrote it,
+  so a sweep silently undid past decisions — `~/.rmapi` was untracked and
+  re-added three times before this existed. It is a *decision* record, not a
+  second trust boundary: the deny-list is what keeps secrets out. `dt add` is
+  explicit intent and always overrides it, which is what makes narrowing a wide
+  entry (untrack the directory, add three files back) still work.
 - **Live files are only written by `dt apply`** (and `dt edit` via `$EDITOR`).
   No other command touches them.
 

@@ -3,7 +3,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
-import { HOME, isDenied } from "./store";
+import { HOME, isDenied, isIgnored, readIgnore } from "./store";
 
 // Home-directory dotfiles that are state, not config.
 const NOISE = [
@@ -31,14 +31,18 @@ function appNameFromConfigEntry(entry: string): string {
 // Everything `dt scan` would track: ~/.config/* entries plus ~/.* files.
 // Guards (deny-list per file, size, binary) run later, at copy time; the
 // deny-list also runs here so secret top-level files never enter the manifest.
+// Anything on the ignore list is skipped too, so an untracked path stays gone.
 export function scanCandidates(): { app: string; livePath: string }[] {
   const found: { app: string; livePath: string }[] = [];
+  const ignored = readIgnore();
 
   const configDir = path.join(HOME, ".config");
   if (fs.existsSync(configDir)) {
     for (const entry of fs.readdirSync(configDir).sort()) {
       if (entry.startsWith(".")) continue;
-      found.push({ app: appNameFromConfigEntry(entry), livePath: path.join(configDir, entry) });
+      const full = path.join(configDir, entry);
+      if (isIgnored(full, ignored)) continue;
+      found.push({ app: appNameFromConfigEntry(entry), livePath: full });
     }
   }
 
@@ -54,6 +58,7 @@ export function scanCandidates(): { app: string; livePath: string }[] {
     }
     if (!st.isFile()) continue; // home dot-DIRS are too risky to auto-track (.ssh, caches)
     if (isDenied(full)) continue;
+    if (isIgnored(full, ignored)) continue;
     found.push({ app: appNameFromDotfile(entry), livePath: full });
   }
   return found;

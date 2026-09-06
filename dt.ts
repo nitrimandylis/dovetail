@@ -12,7 +12,7 @@ const HELP = `dovetail (dt) — find, back up, and edit app configs safely
   dt find <app>          locate an app's config (conventional paths + man page)
   dt scan                sweep ~/.config and ~/ dotfiles, track what passes the guards
   dt add <app> <path..>  track files/dirs manually (anything under ~)
-  dt untrack <app>       stop tracking an app (its history stays in the store)
+  dt untrack <app>       stop tracking an app (also stops dt scan re-adding it)
   dt delete <app>        snapshot, then delete an orphaned config from disk
   dt list                tracked apps and their files
   dt backup [app]        snapshot live files into ~/.dotfiles (a git commit)
@@ -266,6 +266,7 @@ function cmdAdd(app: string | undefined, paths: string[]): void {
   store.ensureStore();
   const m = store.readManifest();
   if (!(app in m)) m[app] = [];
+  const added: string[] = [];
   for (const p of paths) {
     const live = store.untildeify(p);
     if (!fs.existsSync(live)) fail(`${p} does not exist`);
@@ -273,8 +274,11 @@ function cmdAdd(app: string | undefined, paths: string[]): void {
     if (store.isDenied(live)) fail(`${p} is on the secrets deny-list`);
     const t = store.tildeify(live);
     if (!m[app].includes(t)) m[app].push(t);
+    added.push(t);
   }
   store.writeManifest(m);
+  // An explicit add overrides a past untrack, so drop these from the ignore list.
+  store.writeIgnore(store.readIgnore().filter((p) => !added.includes(p)));
   cmdBackup(app, false, `add ${app}`);
 }
 
@@ -286,10 +290,13 @@ function cmdUntrack(app: string | undefined): void {
   for (const p of m[app]) {
     fs.rmSync(store.liveToStore(store.untildeify(p)), { recursive: true, force: true });
   }
+  // Remember the decision, or the next `dt scan` re-adds the same paths.
+  store.writeIgnore([...store.readIgnore(), ...m[app]]);
   delete m[app];
   store.writeManifest(m);
   store.commitAll(`untrack ${app}`);
   console.log(`${app} untracked. its snapshots stay in the store's git history.`);
+  console.log(`dt scan will not re-add it. \`dt add ${app} <path>\` overrides.`);
 }
 
 // For orphaned configs: final snapshot -> delete the live files -> untrack.

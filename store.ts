@@ -9,6 +9,7 @@ import { spawnSync } from "node:child_process";
 export const HOME = process.env.DT_HOME ?? os.homedir();
 export const STORE = process.env.DT_STORE ?? path.join(HOME, ".dotfiles");
 const MANIFEST = path.join(STORE, "manifest.json");
+const IGNORE = path.join(STORE, "ignore.json");
 const MAX_FILE_SIZE = 1024 * 1024; // junk guard: real configs are small
 
 export type Manifest = Record<string, string[]>; // app -> ["~/path", ...]
@@ -155,6 +156,29 @@ export function writeManifest(m: Manifest): void {
   const sorted: Manifest = {};
   for (const app of Object.keys(m).sort()) sorted[app] = m[app];
   fs.writeFileSync(MANIFEST, JSON.stringify(sorted, null, 2) + "\n");
+}
+
+// ---------- ignore list ----------
+// Paths `dt scan` must never re-add. `dt untrack` writes here, so a decision to
+// stop tracking something survives the next sweep; without it scan re-derives
+// the same candidates from disk and undoes you. `dt add` ignores this list
+// entirely — an explicit add is intent, and narrowing a wide entry is exactly
+// "untrack the directory, then add three files back".
+
+export function readIgnore(): string[] {
+  if (!fs.existsSync(IGNORE)) return [];
+  return JSON.parse(fs.readFileSync(IGNORE, "utf8"));
+}
+
+export function writeIgnore(paths: string[]): void {
+  const sorted = [...new Set(paths)].sort();
+  fs.writeFileSync(IGNORE, JSON.stringify(sorted, null, 2) + "\n");
+}
+
+// Exact match is enough: scan only ever proposes top-level ~/.config entries
+// and ~/ dotfiles, so there are no nested paths to prefix-match.
+export function isIgnored(livePath: string, ignored: string[]): boolean {
+  return ignored.includes(tildeify(livePath));
 }
 
 // ---------- copying ----------
