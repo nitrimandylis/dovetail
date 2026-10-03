@@ -17,7 +17,7 @@ Live files stay exactly where they are — never symlinked, never moved.
 Tracked files are mirrored into `~/.dotfiles`, a local git repo:
 
 ```
-~/.dotfiles/                git repo (local only, no remote)
+~/.dotfiles/                git repo (remote optional, added by you)
   manifest.json             { "app": ["~/path", ...], ... }
   ignore.json               ["~/path", ...] — paths `dt scan` must not re-add
   home/.zshrc               mirror of ~/.zshrc
@@ -31,7 +31,7 @@ Sync is two-directional:
   "I hand-edited files in ~/.dotfiles, push them to the live locations."
 
 Conflict rule: if a live file AND its store copy have both changed since the
-last snapshot, `dt` refuses, shows the diff, and makes you pick a direction
+last snapshot, `dt` refuses, lists the files, and makes you pick a direction
 explicitly (`dt backup <app>` or `dt apply <app> --force`). Neither direction
 ever silently destroys the other side's changes.
 
@@ -99,8 +99,8 @@ phantom entries hiding the one that had actually drifted.
   second trust boundary: the deny-list is what keeps secrets out. `dt add` is
   explicit intent and always overrides it, which is what makes narrowing a wide
   entry (untrack the directory, add three files back) still work.
-- **Live files are only written by `dt apply`** (and `dt edit` via `$EDITOR`).
-  No other command touches them.
+- **Live files are only written by `dt apply`, `dt undo` and `dt delete`** (and
+  `dt edit` via `$EDITOR`). No other command touches them.
 
 ## Status
 

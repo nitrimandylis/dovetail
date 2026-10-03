@@ -73,20 +73,25 @@ running either.
 - **The conflict rule is load bearing.** If both the live file and the store changed since the last
   snapshot, `dt` refuses and makes you pick a direction. That refusal is correct — neither side silently
   loses. Resolve it by reading `dt diff` and deciding, not by reaching for `--force`.
-- **`--force` overrides a safety refusal on `backup`, `apply` and `undo`.** Treat it the way you would
+- **`--force` overrides a safety refusal on `backup`, `apply`, `undo` and `delete`.** Treat it the way you would
   treat `git push --force`: only after the user has seen what the refusal was protecting, and never as
   a first response to an error.
 - **`dt undo` is a toggle, not a stack.** Two runs put you back where you started. If the user wants to
   go further back, that is `git` inside `~/.dotfiles`, not `undo` repeated.
 - **A hardcoded deny-list keeps ssh keys, tokens, and shell history out of the store**, plus binaries and
   files over 1MB. Do not try to route around it to get a file tracked. If something legitimately needs
-  tracking and is being excluded, tell the user rather than working around the guard — see the global
-  rule about never handling secrets.
+  tracking and is being excluded, tell the user rather than working around the guard — never handle
+  secrets yourself.
 - **The store is only private if the user made it private.** Once it leaves the machine the deny-list is
   the only thing protecting whatever it missed. Never run `dt push` unprompted, and never suggest adding
   a public remote.
 - **`dt delete` removes a config from disk.** It refuses if any file was never snapshotted, which is the
-  guard that makes it survivable. Confirm explicitly before running it.
+  guard that makes it survivable. `--force` skips that guard, so never add it unprompted. Confirm explicitly before running it.
+- **`DT_HOME` and `DT_STORE` redirect `dt`.** They move the home directory and the store (default
+  `$DT_HOME/.dotfiles`), which is how tests avoid the real one. If `dt list` shows an unexpectedly empty
+  or foreign store, check that neither is set in the environment.
+- **`dt untrack` also stops `dt scan` re-adding the app.** Its paths go on `ignore.json`; `dt add`
+  overrides it.
 - **`dt edit` appends `--wait` for GUI editors**, because they exit immediately and would otherwise make
   the second snapshot fire before you have typed anything. If the user's `$EDITOR` is a GUI editor and
   the second snapshot looks empty, that is the failure mode to check.

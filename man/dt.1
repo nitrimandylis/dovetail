@@ -26,7 +26,11 @@ dotfiles, track what passes the guards.
 Track files/dirs manually (anything under ~).
 .TP
 .B untrack <\fIapp\fR>
-Stop tracking an app (its history stays in the store).
+Stop tracking an app (its history stays in the store). Its paths go on the ignore list, so
+.B dt scan
+will not re-add it; an explicit
+.B add
+overrides that.
 .TP
 .B delete <\fIapp\fR>
 Snapshot, then delete an orphaned config from disk.
@@ -66,7 +70,9 @@ Silent daily backup via launchd.
 .SH OPTIONS
 .TP
 .B \-\-force
-Override a safety refusal (backup / apply / undo).
+Override a safety refusal (backup / apply / undo / delete). On
+.B delete
+it allows removing files that were never snapshotted.
 .TP
 .B \-\-json
 Machine-readable output for
@@ -118,10 +124,34 @@ and
 .TP
 .I ~/.dotfiles
 The git-backed config store.
+.TP
+.I ~/.dotfiles/manifest.json
+The tracked apps and their paths.
+.TP
+.I ~/.dotfiles/ignore.json
+Paths that
+.B untrack
+dropped, which
+.B scan
+skips.
+.TP
+.I ~/.dotfiles/.dt\-backup.log
+Output of the scheduled backup. Git-ignored.
+.TP
+.I ~/Library/LaunchAgents/dev.dovetail.backup.plist
+The launchd agent written by
+.BR install\-schedule .
 .SH ENVIRONMENT
 .TP
 .B EDITOR
 Editor launched by
 .BR "dt edit" .
+.TP
+.B DT_HOME
+Treat this directory as the home directory instead of the real one. Mainly for tests.
+.TP
+.B DT_STORE
+Use this directory as the store instead of
+.IR $DT_HOME/.dotfiles .
 .SH SEE ALSO
 .BR git (1)

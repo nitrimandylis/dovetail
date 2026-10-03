@@ -11,12 +11,12 @@
 
 ### `FIND THE CONFIG // SNAPSHOT THE CONFIG // NEVER LOSE THE CONFIG`
 
-*a dovetail joint for your dotfiles — live files on one side, a local git repo on the other, nothing symlinked in between*
+*a dovetail joint for your dotfiles — live files on one side, a git repo on the other, nothing symlinked in between*
 
 ![runtime](https://img.shields.io/badge/runtime-bun-b45309?style=flat-square&labelColor=111111)
 ![deps](https://img.shields.io/badge/runtime_deps-0-b45309?style=flat-square&labelColor=111111)
 ![platform](https://img.shields.io/badge/platform-macos_only-78716c?style=flat-square&labelColor=111111)
-![remote](https://img.shields.io/badge/remote-none_(that's_the_point)-78716c?style=flat-square&labelColor=111111)
+![remote](https://img.shields.io/badge/remote-optional_(you_add_it)-78716c?style=flat-square&labelColor=111111)
 ![symlinks](https://img.shields.io/badge/symlinks-0._we_copy_like_adults-b45309?style=flat-square&labelColor=111111)
 
 ![dovetail](.github/assets/dovetail.gif)
@@ -27,7 +27,7 @@
 
 ## 🪚 What is this
 
-Every app on your machine keeps a config file somewhere — `~/.config`, a hidden rc file, a folder buried in `~/Library/Application Support` — and some keep none at all. dovetail (`dt`) answers the question first: `dt find <app>` probes the conventional locations and greps the app's man page for a FILES section. Once found, configs get mirrored into `~/.dotfiles`, a local git repository where every backup is a commit and every mistake is an undo.
+Every app on your machine keeps a config file somewhere — `~/.config`, a hidden rc file, a folder buried in `~/Library/Application Support` — and some keep none at all. dovetail (`dt`) answers the question first: `dt find <app>` probes the conventional locations and greps the app's man page for a FILES section. Once found, configs get mirrored into `~/.dotfiles`, a git repository where every backup is a commit and every mistake is an undo.
 
 The core model is deliberately boring: no symlink farms, no templates, no daemon. Your live files stay exactly where they are, and `dt` copies them in (`dt backup`) or out (`dt apply`) — which means hand-editing the store and pushing it live is the same operation as restoring a backup. A hardcoded secrets deny-list keeps your ssh keys, tokens, and shell history out of the repo. The store has no remote unless you add one yourself, and `dt push` only ever pushes to a remote that already exists — make it a private repository, because once the store leaves the machine the deny-list is the only thing protecting anything it missed.
 
@@ -47,14 +47,19 @@ conventional paths:
 |---|---|---|
 | 01 | **`dt find <app>`** | what it actually finds — probes `~/.config`, `~/.<app>rc`, `~/Library`, then greps the man page and `--help` for path mentions |
 | 02 | **`dt scan`** | sweeps `~/.config/*` and home dotfiles, auto-tracks everything that passes the guards — secrets, binaries, and >1MB junk stay out |
-| 03 | **`dt backup [app]`** | mirrors live files into the store and commits — a no-op commit costs nothing, so the daily launchd job is free. pushes too, if you've given the store a remote |
-| 04 | **`dt apply [app]`** | pushes store copies out to the live locations — hand-edit `~/.dotfiles`, run this, done |
-| 05 | **`dt edit <app>`** | snapshot → `$EDITOR` → diff → snapshot. knows GUI editors lie about being done and appends `--wait` for you |
-| 06 | **`dt undo <app>`** | restores the previous snapshot. run it twice and you've redone it (this is a feature, legally speaking) |
-| 07 | **`dt diff [app]`** | live files vs last snapshot, straight from `git diff`. `--json` reports each file's state instead, for scripts |
-| 08 | **`dt delete <app>`** | final snapshot, then removes an orphaned config from disk — refuses if any file was never snapshotted |
-| 09 | **`dt open`** | opens the store in finder, for when you'd rather click |
-| 10 | **conflict rule** | if live *and* store both changed since the last snapshot, dt refuses and makes you pick a direction — neither side silently loses |
+| 03 | **`dt add <app> <path>..`** | tracks files or directories by hand, for anything outside the scan zones. overrides a past `untrack` |
+| 04 | **`dt untrack <app>`** | stops tracking an app. its history stays in the store, and `dt scan` will not re-add it |
+| 05 | **`dt list`** | tracked apps and their files. `--json` for scripts |
+| 06 | **`dt backup [app]`** | mirrors live files into the store and commits — a no-op commit costs nothing, so the daily launchd job is free. pushes too, if you've given the store a remote |
+| 07 | **`dt push`** | pushes the store to its remote, if you have added one. says how to add one if you haven't |
+| 08 | **`dt apply [app]`** | pushes store copies out to the live locations — hand-edit `~/.dotfiles`, run this, done |
+| 09 | **`dt edit <app>`** | snapshot → `$EDITOR` → diff → snapshot. knows GUI editors lie about being done and appends `--wait` for you |
+| 10 | **`dt undo <app>`** | restores the previous snapshot. run it twice and you've redone it (this is a feature, legally speaking) |
+| 11 | **`dt diff [app]`** | live files vs last snapshot, straight from `git diff`. `--json` reports each file's state instead, for scripts |
+| 12 | **`dt delete <app>`** | final snapshot, then removes an orphaned config from disk — refuses if any file was never snapshotted, unless `--force` |
+| 13 | **`dt open`** | opens the store in finder, for when you'd rather click |
+| 14 | **`dt install-schedule`** | writes a launchd agent that runs a silent `dt backup` every day at noon |
+| 15 | **conflict rule** | if live *and* store both changed since the last snapshot, dt refuses and makes you pick a direction — neither side silently loses |
 
 ## 🚀 Run it
 
@@ -64,7 +69,7 @@ You need [bun](https://bun.sh) and a Mac. That's the whole list.
 git clone https://github.com/nitrimandylis/dovetail.git
 cd dovetail
 bun run compile   # → ~/.bun/bin/dt, man dt, and the agent skill
-man dt            # the eleven commands + --force, offline
+man dt            # the fourteen commands + --force, offline
 ```
 
 Then `dt scan` to track everything, `dt install-schedule` for a silent daily backup at noon, and forget it exists until the day you break your zshrc — which is the day it earns its keep.
@@ -86,10 +91,12 @@ flowchart LR
 
 | file | job |
 |---|---|
-| `dt.ts` | the eleven commands, dispatch, and the safety refusals |
+| `dt.ts` | the fourteen commands, dispatch, and the safety refusals |
 | `store.ts` | path mapping, manifest, git plumbing, deny-list, junk guards, mirrored copying |
 | `discover.ts` | scan heuristics and the find engine (conventional paths + man-page grep) |
-| `dt.test.ts` | six checks that fail if the parts that guard your data break |
+| `dt.test.ts` | twelve checks that fail if the parts that guard your data break |
+
+`DT_HOME` and `DT_STORE` point `dt` at another home directory or store, which is how the tests avoid touching your real `~/.dotfiles`.
 
 **Stack:** bun · typescript · node stdlib · git via subprocess · launchd for scheduling
 

@@ -24,7 +24,7 @@ const HELP = `dovetail (dt) — find, back up, and edit app configs safely
   dt open                open the ~/.dotfiles store in Finder
   dt install-schedule    silent daily backup via launchd
 
-  --force                override a safety refusal (backup / apply / undo)
+  --force                override a safety refusal (backup / apply / undo / delete)
   --json                 machine-readable output (list / diff / find)
   --help, -h             show this text and do nothing else`;
 

@@ -16,7 +16,8 @@ recorded there.
 
 ## Invariants (do not break)
 
-- Live config files are written ONLY by `dt apply` and `dt edit` (via $EDITOR).
+- Live config files are written ONLY by `dt apply`, `dt undo`, `dt delete` and
+  `dt edit` (via $EDITOR).
   Every other command treats the live filesystem as read-only.
 - The store is `~/.dotfiles`. `dt` never adds, changes, or removes its remote —
   that stays a manual git operation. `dt push` and the push at the end of
