@@ -46,11 +46,27 @@ test("the schedule runs the compiled binary directly, the script only if it exis
   const { scheduleProgramArgs } = await import("./dt");
   const realScript = path.join(import.meta.dir, "dt.ts");
   expect(scheduleProgramArgs("/usr/bin/bun", realScript)).toEqual(["/usr/bin/bun", realScript, "backup"]);
-  // compiled: import.meta.dir points into bun's embedded fs, so no script on disk
+  // compiled: import.meta.url points into bun's embedded fs, so no script on disk
   expect(scheduleProgramArgs("/Users/x/.bun/bin/dt", "/$bunfs/root/dt.ts")).toEqual([
     "/Users/x/.bun/bin/dt",
     "backup",
   ]);
+});
+
+// launchd's own PATH has no node in it, so the plist has to carry one or the
+// `#!/usr/bin/env node` bin dies every day. Checked on the string: installing
+// for real would load an agent into the real launchd.
+test("the schedule plist puts the running runtime's folder on PATH", async () => {
+  const { schedulePlist } = await import("./dt");
+  const plist = schedulePlist(
+    ["/opt/homebrew/bin/node", "/x/dist/dt.js", "backup"],
+    "/opt/homebrew/bin/node",
+    "/tmp/log",
+  );
+  expect(plist).toContain("<key>EnvironmentVariables</key>");
+  expect(plist).toContain("<string>/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>");
+  expect(plist).toContain("<string>/x/dist/dt.js</string>");
+  expect(plist).toContain("<string>dev.dovetail.backup</string>");
 });
 
 test("dotfile names map to app names", () => {

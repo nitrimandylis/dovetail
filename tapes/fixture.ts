@@ -5,10 +5,13 @@
 //
 // Run: bun tapes/fixture.ts   (tapes/dovetail.tape does this itself)
 
-import { mkdirSync, rmSync } from "node:fs";
-import { join } from "node:path";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const home = join(import.meta.dir, "fixtures", "home");
+const here = dirname(fileURLToPath(import.meta.url));
+
+const home = join(here, "fixtures", "home");
 
 const files: Record<string, string> = {
   ".config/ghostty/config": [
@@ -31,11 +34,11 @@ const files: Record<string, string> = {
   ".zshrc": ["export EDITOR=nvim", 'alias ll="ls -lah"', ""].join("\n"),
 };
 
-rmSync(join(import.meta.dir, "fixtures"), { recursive: true, force: true });
+rmSync(join(here, "fixtures"), { recursive: true, force: true });
 for (const [rel, body] of Object.entries(files)) {
   const full = join(home, rel);
   mkdirSync(join(full, ".."), { recursive: true });
-  await Bun.write(full, body);
+  writeFileSync(full, body);
 }
 
 console.log(`fixture home: ${home}`);

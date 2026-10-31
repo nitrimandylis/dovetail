@@ -1,9 +1,10 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 // dt — find, back up, and safely edit app configs. Design: PRODUCT.md.
 import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { parseArgs } from "node:util";
+import { fileURLToPath } from "node:url";
 import * as store from "./store";
 import * as discover from "./discover";
 
@@ -401,8 +402,9 @@ function cmdFind(app: string | undefined, json = false): void {
 }
 
 // What launchd should actually run. Compiled with `bun build --compile`, the
-// binary runs itself and takes the command straight away. From source it is bun
-// followed by the script path. import.meta.dir points inside bun's embedded
+// binary runs itself and takes the command straight away. Otherwise it is the
+// runtime (node, or bun from source) followed by the script path: dist/dt.js
+// from npm, dt.ts from a clone. import.meta.url points inside bun's embedded
 // filesystem in the compiled case, so "is the script really on disk" separates
 // the two. Getting this wrong is invisible: dt would receive the bogus script
 // path as its command, print the help text, and exit 0 every single day.
@@ -415,20 +417,29 @@ export function scheduleProgramArgs(execPath: string, scriptPath: string): strin
 // plist, which looks like nothing at all until the log has two entries a day.
 const OLD_SCHEDULE_LABEL = "dev.nick.dt-backup";
 
-function cmdInstallSchedule(): void {
-  const label = "dev.dovetail.backup";
-  const logFile = path.join(store.STORE, ".dt-backup.log");
-  const plistPath = path.join(store.HOME, "Library", "LaunchAgents", `${label}.plist`);
-  const args = scheduleProgramArgs(process.execPath, path.join(import.meta.dir, "dt.ts"));
-  const plist = `<?xml version="1.0" encoding="UTF-8"?>
+const SCHEDULE_LABEL = "dev.dovetail.backup";
+
+// launchd starts agents with PATH=/usr/bin:/bin:/usr/sbin:/sbin. The npm bin
+// starts with `#!/usr/bin/env node`, and node usually lives somewhere else
+// (/opt/homebrew/bin, ~/.nvm/...), so without this the daily run dies with
+// "env: node: No such file". The folder of the runtime running dt right now
+// goes first; the system folders after it cover git (/usr/bin/git).
+export function schedulePath(execPath: string): string {
+  return [path.dirname(execPath), "/usr/bin", "/bin", "/usr/sbin", "/sbin"].join(":");
+}
+
+export function schedulePlist(args: string[], execPath: string, logFile: string): string {
+  return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <key>Label</key><string>${label}</string>
+  <key>Label</key><string>${SCHEDULE_LABEL}</string>
   <key>ProgramArguments</key>
   <array>
 ${args.map((a) => `    <string>${a}</string>`).join("\n")}
   </array>
+  <key>EnvironmentVariables</key>
+  <dict><key>PATH</key><string>${schedulePath(execPath)}</string></dict>
   <key>StartCalendarInterval</key>
   <dict><key>Hour</key><integer>12</integer><key>Minute</key><integer>0</integer></dict>
   <key>StandardOutPath</key><string>${logFile}</string>
@@ -436,6 +447,13 @@ ${args.map((a) => `    <string>${a}</string>`).join("\n")}
 </dict>
 </plist>
 `;
+}
+
+function cmdInstallSchedule(): void {
+  const logFile = path.join(store.STORE, ".dt-backup.log");
+  const plistPath = path.join(store.HOME, "Library", "LaunchAgents", `${SCHEDULE_LABEL}.plist`);
+  const args = scheduleProgramArgs(process.execPath, fileURLToPath(import.meta.url));
+  const plist = schedulePlist(args, process.execPath, logFile);
   store.ensureStore();
   fs.mkdirSync(path.dirname(plistPath), { recursive: true });
   fs.writeFileSync(plistPath, plist);
@@ -457,7 +475,25 @@ ${args.map((a) => `    <string>${a}</string>`).join("\n")}
 
 // ---------- dispatch ----------
 
-if (import.meta.main) main();
+// Run main only when this file is the program, not when a test imports it.
+// Not import.meta.main: Node 22 lacks it. argv[1] is the script that was run.
+// The plain comparison covers `node dist/dt.js`, `bun dt.ts` and the compiled
+// binary (whose paths live in bun's embedded fs, where realpath fails). The
+// realpath comparison covers a global npm bin, which is a symlink to dist/dt.js:
+// argv[1] is the symlink while import.meta.url is the real file.
+function isMainModule(): boolean {
+  const script = process.argv[1];
+  if (script === undefined) return false;
+  const self = fileURLToPath(import.meta.url);
+  if (script === self) return true;
+  try {
+    return fs.realpathSync(script) === fs.realpathSync(self);
+  } catch {
+    return false;
+  }
+}
+
+if (isMainModule()) main();
 
 function main(): void {
 // parseArgs is strict: an unknown flag throws instead of being silently

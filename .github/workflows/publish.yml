@@ -1,0 +1,46 @@
+# Releases dovetail to npm when a GitHub release is published.
+#
+# Authenticated by OIDC, not a token, so nothing secret is stored in this repo
+# and a release needs neither a local clone nor an OTP.
+#
+# This workflow is inert until a trusted publisher exists on npm, and npm cannot
+# create one for a package that has never been published. So 1.1.0 goes up by
+# hand; from the next version onward this is the only publish path. See PRODUCT.md.
+name: publish
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write # no OIDC token to present without this
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24" # trusted publishing needs 22.14+, npm@latest needs 24.15+
+          registry-url: "https://registry.npmjs.org"
+
+      # The npm bundled with Node 22 predates trusted publishing.
+      - run: npm install -g npm@latest
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      # The tests commit into throwaway stores, and a fresh runner has no git
+      # identity to commit as.
+      - run: git config --global user.name ci && git config --global user.email ci@example.com
+
+      - run: bun install --frozen-lockfile
+      - run: bun test
+      - run: bunx tsc --noEmit
+
+      # prepack builds dist/, which is gitignored and absent from the checkout.
+      - run: npm publish
