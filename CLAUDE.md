@@ -5,11 +5,14 @@ recorded there.
 
 ## Stack & conventions
 
-- Bun + TypeScript. Zero runtime dependencies — arg parsing via
-  `node:util` `parseArgs`, file ops via `node:fs`, git via `Bun.spawn`.
-  Ask before adding any dependency.
-- Global install is `bun run compile` (binary name `dt`), which also installs
-  the man page and the agent skill. Never instruct running scripts by path; the
+- TypeScript on Node APIs only, so the npm build runs on plain Node 22+. Bun is
+  the toolchain (build, test, compile). Zero runtime dependencies: arg parsing
+  via `node:util` `parseArgs`, file ops via `node:fs`, git via
+  `node:child_process` `spawnSync`. No `Bun.*` and no `import.meta.dir/main`
+  in shipped code. Ask before adding any dependency.
+- Published to npm as `@nitrimandylis/dovetail` (bin `dt`, `dist/dt.js` built by
+  `bun run build`). Nick's own global install is `bun run compile`, which also
+  installs the man page and the agent skill. Never instruct running scripts by path; the
   tool is used from a shell anywhere.
 - Code at IB-CS-student level: plain, explicit, defensible line-by-line.
   No clever one-liners, no generics gymnastics.

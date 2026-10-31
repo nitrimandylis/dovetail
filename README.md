@@ -13,7 +13,7 @@
 
 *a dovetail joint for your dotfiles — live files on one side, a git repo on the other, nothing symlinked in between*
 
-![runtime](https://img.shields.io/badge/runtime-bun-b45309?style=flat-square&labelColor=111111)
+![runtime](https://img.shields.io/badge/runtime-node_22+-b45309?style=flat-square&labelColor=111111)
 ![deps](https://img.shields.io/badge/runtime_deps-0-b45309?style=flat-square&labelColor=111111)
 ![platform](https://img.shields.io/badge/platform-macos_only-78716c?style=flat-square&labelColor=111111)
 ![remote](https://img.shields.io/badge/remote-optional_(you_add_it)-78716c?style=flat-square&labelColor=111111)
@@ -63,7 +63,15 @@ conventional paths:
 
 ## 🚀 Run it
 
-You need [bun](https://bun.sh) and a Mac. That's the whole list.
+You need a Mac and Node 22 or newer. The package is `@nitrimandylis/dovetail`; the command it installs is `dt`.
+
+```bash
+npx @nitrimandylis/dovetail find ghostty   # try it without installing
+npm i -g @nitrimandylis/dovetail           # then: dt --help
+bun add -g @nitrimandylis/dovetail         # same thing, with bun
+```
+
+Or build from source, which needs [bun](https://bun.sh):
 
 ```bash
 git clone https://github.com/nitrimandylis/dovetail.git
@@ -74,9 +82,11 @@ man dt            # the fourteen commands + --force, offline
 
 Then `dt scan` to track everything, `dt install-schedule` for a silent daily backup at noon, and forget it exists until the day you break your zshrc — which is the day it earns its keep.
 
+launchd runs agents with a bare system PATH that has no `node` on it, so `dt install-schedule` writes the folder of the Node running it into the agent's PATH. Switch Node versions or move your install? Run `dt install-schedule` again.
+
 ## 🤖 The agent skill
 
-`dovetail-cli/SKILL.md` is an agent skill for driving `dt` — that snapshotting comes before editing, why the conflict refusal is correct and what `--force` is really overriding, and that `undo` is a toggle rather than a stack. The traps that don't fit in `--help`, in other words. `bun run compile` copies it into `~/.claude/skills/` if you already have that directory, and leaves your machine alone if you don't.
+`dovetail-cli/SKILL.md` is an agent skill for driving `dt`: that snapshotting comes before editing, why the conflict refusal is correct and what `--force` is really overriding, and that `undo` is a toggle rather than a stack. The traps that don't fit in `--help`, in other words. `bun run compile` copies it into `~/.claude/skills/` if you already have that directory, and leaves your machine alone if you don't. An npm install does not copy it: grab `dovetail-cli/` from this repo.
 
 It's a plain directory at the repo root rather than a `.claude/` one, because this repo is public and not everyone drives it with the same agent. Point yours at the file.
 
@@ -94,11 +104,11 @@ flowchart LR
 | `dt.ts` | the fourteen commands, dispatch, and the safety refusals |
 | `store.ts` | path mapping, manifest, git plumbing, deny-list, junk guards, mirrored copying |
 | `discover.ts` | scan heuristics and the find engine (conventional paths + man-page grep) |
-| `dt.test.ts` | twelve checks that fail if the parts that guard your data break |
+| `dt.test.ts` | thirteen checks that fail if the parts that guard your data break |
 
 `DT_HOME` and `DT_STORE` point `dt` at another home directory or store, which is how the tests avoid touching your real `~/.dotfiles`.
 
-**Stack:** bun · typescript · node stdlib · git via subprocess · launchd for scheduling
+**Stack:** typescript · node stdlib only, so it runs on plain Node · bun to build, test and compile · git via subprocess · launchd for scheduling
 
 ---
 

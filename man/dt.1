@@ -1,4 +1,4 @@
-.TH DT 1 "2026-07-12" "dovetail 1.0.0" "User Commands"
+.TH DT 1 "2026-10-31" "dovetail 1.1.0" "User Commands"
 .SH NAME
 dt \- find, back up, and edit app configs safely
 .SH SYNOPSIS
@@ -66,7 +66,12 @@ Open the
 store in Finder.
 .TP
 .B install\-schedule
-Silent daily backup via launchd.
+Silent daily backup via launchd. The agent's PATH starts with the folder of
+the Node (or bun) running
+.BR dt ,
+because launchd's own PATH has no
+.BR node .
+Run it again after switching Node versions.
 .SH OPTIONS
 .TP
 .B \-\-force

@@ -2,8 +2,9 @@
 
 A personal CLI for finding, backing up, and safely editing the configs and
 dotfiles of apps and CLI tools. Single machine (this Mac), single user (Nick).
-Built with Bun + TypeScript, zero dependencies, installed globally via
-`bun run compile` so `dt` works from any shell.
+TypeScript, zero dependencies. Published to npm as `@nitrimandylis/dovetail`
+(bin `dt`) and runs on plain Node 22+; Nick's own install is still
+`bun run compile`.
 
 ## Why it exists
 
@@ -107,6 +108,30 @@ phantom entries hiding the one that had actually drifted.
 - [x] Design settled (see decisions above)
 - [x] v1 implemented — `dt.ts` (commands), `store.ts` (store/git/guards),
       `discover.ts` (scan/find), `dt.test.ts` (checks). Installed via `bun run compile`.
+- [x] 1.1.0: ported to Node APIs for npm, launchd PATH fix (see Distribution)
+
+## Distribution (since 1.1.0)
+
+- **npm from 1.1.0.** Scoped as `@nitrimandylis/dovetail` because bare
+  `dovetail` is taken. The bin stays `dt`. macOS only (`os: ["darwin"]`),
+  Node 22+.
+- **Node APIs only.** The shipped code uses `node:fs`, `node:child_process`
+  and `node:url`, no `Bun.*`. `bun run build` bundles it into one ESM file,
+  `dist/dt.js`, with a `#!/usr/bin/env node` shebang. The main guard compares
+  `argv[1]` with the module's own path (plain, then realpath), because Node 22
+  has no `import.meta.main` and a global npm bin is a symlink.
+- **Bun stays the toolchain**: `bun test`, `bun dt.ts`, `bun run build`,
+  `bun run compile`.
+- **launchd PATH fix.** launchd starts agents with
+  `PATH=/usr/bin:/bin:/usr/sbin:/sbin`, which has no `node`, so a scheduled run
+  of the npm bin would die with `env: node: No such file`. `dt install-schedule`
+  now writes an `EnvironmentVariables` PATH into the plist: the folder of the
+  runtime running dt first, then the system folders (which hold git). Switching
+  Node versions means running `dt install-schedule` again.
+- **Releases** go out from a published GitHub release through
+  `.github/workflows/publish.yml`, authenticated by OIDC trusted publishing. No
+  token lives in the repo. 1.1.0 goes up by hand, because npm cannot attach a
+  trusted publisher to a package that has never been published.
 
 ## Roadmap (v2, only if actually missed)
 

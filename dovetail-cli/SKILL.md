@@ -6,7 +6,8 @@ description: Drive the dovetail (`dt`) CLI — find, back up, diff, and restore 
 # dovetail (`dt`)
 
 `dt` mirrors live config files into `~/.dotfiles`, a local git repo where every backup is a commit and
-every mistake is an undo. Compiled Bun binary at `~/.bun/bin/dt`. Full offline reference: `man dt`.
+every mistake is an undo. Installed from npm (`npm i -g @nitrimandylis/dovetail`, runs on Node 22+) or as a
+compiled Bun binary at `~/.bun/bin/dt`. Full offline reference: `man dt`.
 
 Nothing is symlinked. Live files stay where they are and `dt` copies them **in** (`backup`) or **out**
 (`apply`). That symmetry is the whole design: hand-editing the store and pushing it live is the same
